@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import {
     View,
     Text,
-    StyleSheet,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -11,9 +10,10 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
-import { Input } from '../../components/ui/Input';
-import { Button } from '../../components/ui/Button';
-import { authService } from '../../services/auth.service';
+import { Input } from '../../../components/ui/Input';
+import { Button } from '../../../components/ui/Button';
+import { authService } from '../../../services/auth.service';
+import { styles } from './styles';
 
 export default function ForgotPasswordScreen() {
     const router = useRouter();
@@ -53,10 +53,7 @@ export default function ForgotPasswordScreen() {
     };
 
     return (
-        <LinearGradient
-            colors={['#0F172A', '#1E293B', '#0F172A']}
-            style={styles.gradient}
-        >
+        <LinearGradient colors={['#0F172A', '#1E293B', '#0F172A']} style={styles.gradient}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.container}
@@ -66,7 +63,6 @@ export default function ForgotPasswordScreen() {
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                 >
-                    {/* Header */}
                     <View style={styles.header}>
                         <Text style={styles.title}>Forgot Password?</Text>
                         <Text style={styles.subtitle}>
@@ -74,7 +70,6 @@ export default function ForgotPasswordScreen() {
                         </Text>
                     </View>
 
-                    {/* Form */}
                     <View style={styles.form}>
                         <Input
                             label="Email"
@@ -97,7 +92,6 @@ export default function ForgotPasswordScreen() {
                             style={styles.sendButton}
                         />
 
-                        {/* Back to Login */}
                         <View style={styles.backContainer}>
                             <TouchableOpacity onPress={() => router.back()}>
                                 <Text style={styles.backText}>← Back to Login</Text>
@@ -109,49 +103,3 @@ export default function ForgotPasswordScreen() {
         </LinearGradient>
     );
 }
-
-const styles = StyleSheet.create({
-    gradient: {
-        flex: 1,
-    },
-    container: {
-        flex: 1,
-    },
-    scrollContent: {
-        flexGrow: 1,
-        paddingHorizontal: 24,
-        paddingTop: 100,
-        paddingBottom: 40,
-    },
-    header: {
-        marginBottom: 50,
-    },
-    title: {
-        fontSize: 36,
-        fontWeight: '700',
-        color: '#F9FAFB',
-        marginBottom: 16,
-        letterSpacing: -0.5,
-    },
-    subtitle: {
-        fontSize: 16,
-        color: '#9CA3AF',
-        letterSpacing: 0.2,
-        lineHeight: 24,
-    },
-    form: {
-        flex: 1,
-    },
-    sendButton: {
-        marginTop: 16,
-    },
-    backContainer: {
-        marginTop: 32,
-        alignItems: 'center',
-    },
-    backText: {
-        color: '#9CA3AF',
-        fontSize: 15,
-        fontWeight: '600',
-    },
-});

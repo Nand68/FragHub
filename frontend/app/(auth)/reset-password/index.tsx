@@ -1,8 +1,7 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     View,
     Text,
-    StyleSheet,
     KeyboardAvoidingView,
     Platform,
     ScrollView,
@@ -11,10 +10,11 @@ import {
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import { OTPInput } from '../../components/ui/OTPInput';
-import { Input } from '../../components/ui/Input';
-import { Button } from '../../components/ui/Button';
-import { authService } from '../../services/auth.service';
+import { OTPInput } from '../../../components/ui/OTPInput';
+import { Input } from '../../../components/ui/Input';
+import { Button } from '../../../components/ui/Button';
+import { authService } from '../../../services/auth.service';
+import { styles } from './styles';
 
 export default function ResetPasswordScreen() {
     const router = useRouter();
@@ -87,10 +87,7 @@ export default function ResetPasswordScreen() {
     };
 
     return (
-        <LinearGradient
-            colors={['#0F172A', '#1E293B', '#0F172A']}
-            style={styles.gradient}
-        >
+        <LinearGradient colors={['#0F172A', '#1E293B', '#0F172A']} style={styles.gradient}>
             <KeyboardAvoidingView
                 behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
                 style={styles.container}
@@ -100,7 +97,6 @@ export default function ResetPasswordScreen() {
                     showsVerticalScrollIndicator={false}
                     keyboardShouldPersistTaps="handled"
                 >
-                    {/* Header */}
                     <View style={styles.header}>
                         <Text style={styles.title}>Reset Password</Text>
                         <Text style={styles.subtitle}>
@@ -109,7 +105,6 @@ export default function ResetPasswordScreen() {
                         </Text>
                     </View>
 
-                    {/* Form */}
                     <View style={styles.form}>
                         <OTPInput value={otp} onChange={setOtp} error={errors.otp} />
 
@@ -126,7 +121,6 @@ export default function ResetPasswordScreen() {
                             error={errors.newPassword}
                         />
 
-                        {/* Password Strength Indicator */}
                         {newPassword.length > 0 && (
                             <View style={styles.strengthContainer}>
                                 <View style={styles.strengthBars}>
@@ -168,7 +162,6 @@ export default function ResetPasswordScreen() {
                             style={styles.resetButton}
                         />
 
-                        {/* Back */}
                         <View style={styles.backContainer}>
                             <TouchableOpacity onPress={() => router.back()}>
                                 <Text style={styles.backText}>← Back</Text>
@@ -180,76 +173,3 @@ export default function ResetPasswordScreen() {
         </LinearGradient>
     );
 }
-
-const styles = StyleSheet.create({
-    gradient: {
-        flex: 1,
-    },
-    container: {
-        flex: 1,
-    },
-    scrollContent: {
-        flexGrow: 1,
-        paddingHorizontal: 24,
-        paddingTop: 80,
-        paddingBottom: 40,
-    },
-    header: {
-        marginBottom: 40,
-    },
-    title: {
-        fontSize: 36,
-        fontWeight: '700',
-        color: '#F9FAFB',
-        marginBottom: 16,
-        letterSpacing: -0.5,
-    },
-    subtitle: {
-        fontSize: 16,
-        color: '#9CA3AF',
-        letterSpacing: 0.2,
-        lineHeight: 24,
-    },
-    email: {
-        color: '#8B5CF6',
-        fontWeight: '600',
-    },
-    form: {
-        flex: 1,
-    },
-    strengthContainer: {
-        flexDirection: 'row',
-        alignItems: 'center',
-        marginTop: -8,
-        marginBottom: 16,
-        gap: 12,
-    },
-    strengthBars: {
-        flexDirection: 'row',
-        gap: 4,
-        flex: 1,
-    },
-    strengthBar: {
-        flex: 1,
-        height: 4,
-        borderRadius: 2,
-        backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    },
-    strengthText: {
-        fontSize: 12,
-        fontWeight: '600',
-        minWidth: 60,
-    },
-    resetButton: {
-        marginTop: 8,
-    },
-    backContainer: {
-        marginTop: 32,
-        alignItems: 'center',
-    },
-    backText: {
-        color: '#9CA3AF',
-        fontSize: 15,
-        fontWeight: '600',
-    },
-});
