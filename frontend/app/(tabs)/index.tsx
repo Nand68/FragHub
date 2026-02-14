@@ -22,6 +22,16 @@ export default function HomeScreen() {
                 <Text style={styles.title}>Welcome to FragHub!</Text>
                 <Text style={styles.subtitle}>You're successfully logged in</Text>
 
+                <TouchableOpacity
+                    style={styles.profileButton}
+                    onPress={() => router.push('/user-profile')}
+                >
+                    <View style={styles.profileIconContainer}>
+                        <Text style={styles.profileIcon}>👤</Text>
+                    </View>
+                    <Text style={styles.profileText}>My Profile</Text>
+                </TouchableOpacity>
+
                 <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                     <Text style={styles.logoutText}>Logout</Text>
                 </TouchableOpacity>
@@ -52,6 +62,34 @@ const styles = StyleSheet.create({
         color: '#9CA3AF',
         marginBottom: 40,
         textAlign: 'center',
+    },
+    profileButton: {
+        backgroundColor: 'rgba(59, 130, 246, 0.2)',
+        paddingHorizontal: 32,
+        paddingVertical: 16,
+        borderRadius: 12,
+        borderWidth: 1.5,
+        borderColor: '#3B82F6',
+        marginBottom: 16,
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 12,
+    },
+    profileIconContainer: {
+        width: 32,
+        height: 32,
+        borderRadius: 16,
+        backgroundColor: 'rgba(59, 130, 246, 0.3)',
+        justifyContent: 'center',
+        alignItems: 'center',
+    },
+    profileIcon: {
+        fontSize: 18,
+    },
+    profileText: {
+        color: '#3B82F6',
+        fontSize: 16,
+        fontWeight: '600',
     },
     logoutButton: {
         backgroundColor: 'rgba(239, 68, 68, 0.2)',

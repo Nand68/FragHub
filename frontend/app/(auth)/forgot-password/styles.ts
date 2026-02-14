@@ -1,6 +1,6 @@
 import { StyleSheet } from 'react-native';
 
-export const styles = StyleSheet.create({
+const styles = StyleSheet.create({
     gradient: {
         flex: 1,
     },
@@ -45,3 +45,5 @@ export const styles = StyleSheet.create({
         fontWeight: '600',
     },
 });
+
+export default styles;

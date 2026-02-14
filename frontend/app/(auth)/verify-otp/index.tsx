@@ -13,7 +13,7 @@ import { useRouter, useLocalSearchParams } from 'expo-router';
 import { OTPInput } from '../../../components/ui/OTPInput';
 import { Button } from '../../../components/ui/Button';
 import { authService } from '../../../services/auth.service';
-import { styles } from './styles';
+import styles from './styles';
 
 export default function VerifyOTPScreen() {
     const router = useRouter();

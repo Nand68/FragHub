@@ -14,7 +14,7 @@ import { OTPInput } from '../../../components/ui/OTPInput';
 import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
 import { authService } from '../../../services/auth.service';
-import { styles } from './styles';
+import  styles  from './styles';
 
 export default function ResetPasswordScreen() {
     const router = useRouter();

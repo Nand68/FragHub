@@ -14,7 +14,7 @@ import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
 import { authService } from '../../../services/auth.service';
 import { useAuth } from '../../../context/AuthContext';
-import { styles } from './styles';
+import  styles  from './styles';
 
 export default function LoginScreen() {
     const router = useRouter();
