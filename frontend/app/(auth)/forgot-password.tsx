@@ -1,0 +1,157 @@
+import React, { useState } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    KeyboardAvoidingView,
+    Platform,
+    ScrollView,
+    TouchableOpacity,
+    Alert,
+} from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { Input } from '../../components/ui/Input';
+import { Button } from '../../components/ui/Button';
+import { authService } from '../../services/auth.service';
+
+export default function ForgotPasswordScreen() {
+    const router = useRouter();
+    const [email, setEmail] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [error, setError] = useState('');
+
+    const validate = () => {
+        if (!email) {
+            setError('Email is required');
+            return false;
+        }
+        if (!/\S+@\S+\.\S+/.test(email)) {
+            setError('Email is invalid');
+            return false;
+        }
+        return true;
+    };
+
+    const handleSendOTP = async () => {
+        if (!validate()) return;
+
+        setLoading(true);
+        setError('');
+        try {
+            await authService.forgotPassword(email);
+            Alert.alert('Success', 'OTP sent to your email!');
+            router.push({
+                pathname: '/(auth)/reset-password',
+                params: { email },
+            });
+        } catch (error: any) {
+            setError(error.response?.data?.message || 'Failed to send OTP. Please try again.');
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <LinearGradient
+            colors={['#0F172A', '#1E293B', '#0F172A']}
+            style={styles.gradient}
+        >
+            <KeyboardAvoidingView
+                behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+                style={styles.container}
+            >
+                <ScrollView
+                    contentContainerStyle={styles.scrollContent}
+                    showsVerticalScrollIndicator={false}
+                    keyboardShouldPersistTaps="handled"
+                >
+                    {/* Header */}
+                    <View style={styles.header}>
+                        <Text style={styles.title}>Forgot Password?</Text>
+                        <Text style={styles.subtitle}>
+                            Don't worry! Enter your email and we'll send you an OTP to reset your password.
+                        </Text>
+                    </View>
+
+                    {/* Form */}
+                    <View style={styles.form}>
+                        <Input
+                            label="Email"
+                            placeholder="Enter your email"
+                            value={email}
+                            onChangeText={(text) => {
+                                setEmail(text);
+                                setError('');
+                            }}
+                            keyboardType="email-address"
+                            autoCapitalize="none"
+                            icon="mail"
+                            error={error}
+                        />
+
+                        <Button
+                            title="Send OTP"
+                            onPress={handleSendOTP}
+                            loading={loading}
+                            style={styles.sendButton}
+                        />
+
+                        {/* Back to Login */}
+                        <View style={styles.backContainer}>
+                            <TouchableOpacity onPress={() => router.back()}>
+                                <Text style={styles.backText}>← Back to Login</Text>
+                            </TouchableOpacity>
+                        </View>
+                    </View>
+                </ScrollView>
+            </KeyboardAvoidingView>
+        </LinearGradient>
+    );
+}
+
+const styles = StyleSheet.create({
+    gradient: {
+        flex: 1,
+    },
+    container: {
+        flex: 1,
+    },
+    scrollContent: {
+        flexGrow: 1,
+        paddingHorizontal: 24,
+        paddingTop: 100,
+        paddingBottom: 40,
+    },
+    header: {
+        marginBottom: 50,
+    },
+    title: {
+        fontSize: 36,
+        fontWeight: '700',
+        color: '#F9FAFB',
+        marginBottom: 16,
+        letterSpacing: -0.5,
+    },
+    subtitle: {
+        fontSize: 16,
+        color: '#9CA3AF',
+        letterSpacing: 0.2,
+        lineHeight: 24,
+    },
+    form: {
+        flex: 1,
+    },
+    sendButton: {
+        marginTop: 16,
+    },
+    backContainer: {
+        marginTop: 32,
+        alignItems: 'center',
+    },
+    backText: {
+        color: '#9CA3AF',
+        fontSize: 15,
+        fontWeight: '600',
+    },
+});

@@ -131,3 +131,82 @@ exports.logout = async (req, res) => {
 
   res.json({ message: "Logged out successfully" });
 };
+
+
+// ================= FORGOT PASSWORD =================
+exports.forgotPassword = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user)
+      return res.status(400).json({ message: "User not found" });
+
+    const otp = generateOTP();
+    const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
+
+    user.otp = hashedOTP;
+    user.otpExpires = Date.now() + 10 * 60 * 1000;
+    await user.save();
+
+    await sendEmail(email, "Reset Password", `Your OTP for password reset is ${otp}`);
+
+    res.json({ message: "OTP sent to your email" });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+// ================= RESET PASSWORD =================
+exports.resetPassword = async (req, res) => {
+  const { email, otp, newPassword } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user) return res.status(400).json({ message: "User not found" });
+
+    const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
+
+    if (user.otp !== hashedOTP || user.otpExpires < Date.now())
+      return res.status(400).json({ message: "Invalid or expired OTP" });
+
+    const hashedPassword = await bcrypt.hash(newPassword, 12);
+    user.password = hashedPassword;
+    user.otp = undefined;
+    user.otpExpires = undefined;
+    await user.save();
+
+    res.json({ message: "Password reset successfully" });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
+
+
+// ================= RESEND OTP =================
+exports.resendOTP = async (req, res) => {
+  const { email } = req.body;
+
+  try {
+    const user = await User.findOne({ email });
+    if (!user)
+      return res.status(400).json({ message: "User not found" });
+
+    const otp = generateOTP();
+    const hashedOTP = crypto.createHash("sha256").update(otp).digest("hex");
+
+    user.otp = hashedOTP;
+    user.otpExpires = Date.now() + 10 * 60 * 1000;
+    await user.save();
+
+    await sendEmail(email, "Verify Email", `Your new OTP is ${otp}`);
+
+    res.json({ message: "OTP resent successfully" });
+
+  } catch (err) {
+    res.status(500).json({ message: err.message });
+  }
+};
