@@ -87,6 +87,42 @@ const styles = StyleSheet.create({
         fontSize: 15,
         fontWeight: '700',
     },
+    roleContainer: {
+        marginBottom: 20,
+    },
+    roleLabel: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#F9FAFB',
+        marginBottom: 12,
+    },
+    roleSelector: {
+        flexDirection: 'row',
+        gap: 12,
+    },
+    roleButton: {
+        flex: 1,
+        paddingVertical: 14,
+        paddingHorizontal: 20,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderWidth: 2,
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    roleButtonActive: {
+        backgroundColor: 'rgba(139, 92, 246, 0.15)',
+        borderColor: '#8B5CF6',
+    },
+    roleButtonText: {
+        fontSize: 15,
+        fontWeight: '600',
+        color: '#9CA3AF',
+    },
+    roleButtonTextActive: {
+        color: '#8B5CF6',
+    },
 });
 
 export default styles;

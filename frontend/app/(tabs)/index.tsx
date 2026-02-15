@@ -5,7 +5,7 @@ import { useAuth } from '../../context/AuthContext';
 import { useRouter } from 'expo-router';
 
 export default function HomeScreen() {
-    const { logout } = useAuth();
+    const { logout, userRole } = useAuth();
     const router = useRouter();
 
     const handleLogout = async () => {
@@ -22,15 +22,17 @@ export default function HomeScreen() {
                 <Text style={styles.title}>Welcome to FragHub!</Text>
                 <Text style={styles.subtitle}>You're successfully logged in</Text>
 
-                <TouchableOpacity
-                    style={styles.profileButton}
-                    onPress={() => router.push('/user-profile')}
-                >
-                    <View style={styles.profileIconContainer}>
-                        <Text style={styles.profileIcon}>👤</Text>
-                    </View>
-                    <Text style={styles.profileText}>My Profile</Text>
-                </TouchableOpacity>
+                {userRole === 'player' && (
+                    <TouchableOpacity
+                        style={styles.profileButton}
+                        onPress={() => router.push('/user-profile')}
+                    >
+                        <View style={styles.profileIconContainer}>
+                            <Text style={styles.profileIcon}>👤</Text>
+                        </View>
+                        <Text style={styles.profileText}>My Profile</Text>
+                    </TouchableOpacity>
+                )}
 
                 <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
                     <Text style={styles.logoutText}>Logout</Text>

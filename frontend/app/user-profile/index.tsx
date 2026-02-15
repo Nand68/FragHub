@@ -6,10 +6,11 @@ import {
     TouchableOpacity,
     TextInput,
     ActivityIndicator,
-    Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import Toast from 'react-native-toast-message';
+import { useAuth } from '../../context/AuthContext';
 import styles from './styles';
 import profileService, { UserProfile } from '../../services/profile.service';
 import CountryDropdown from '../../components/CountryDropdown';
@@ -34,6 +35,7 @@ const PREFERRED_MAPS = ['Erangel', 'Miramar', 'Sanhok', 'Livik', 'Rondo'];
 
 export default function UserProfileScreen() {
     const router = useRouter();
+    const { userRole } = useAuth();
     const [loading, setLoading] = useState(true);
     const [saving, setSaving] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
@@ -66,8 +68,18 @@ export default function UserProfileScreen() {
     });
 
     useEffect(() => {
+        // Redirect organisation users
+        if (userRole === 'organisation') {
+            Toast.show({
+                type: 'error',
+                text1: 'Access Denied',
+                text2: 'This feature is only available for players.',
+            });
+            setTimeout(() => router.back(), 1000);
+            return;
+        }
         loadProfile();
-    }, []);
+    }, [userRole]);
 
     const loadProfile = async () => {
         try {
@@ -78,7 +90,11 @@ export default function UserProfileScreen() {
                 setIsEditMode(true);
             }
         } catch (error: any) {
-            Alert.alert('Error', error.message || 'Failed to load profile');
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: error.message || 'Failed to load profile',
+            });
         } finally {
             setLoading(false);
         }
@@ -93,7 +109,11 @@ export default function UserProfileScreen() {
         if (!formData.pubgUID) {
             missing.push('PUBG UID');
         } else if (!/^\d{11}$/.test(formData.pubgUID)) {
-            Alert.alert('Invalid PUBG UID', 'PUBG UID must be exactly 11 digits');
+            Toast.show({
+                type: 'error',
+                text1: 'Invalid PUBG UID',
+                text2: 'PUBG UID must be exactly 11 digits',
+            });
             return ['PUBG UID'];
         }
         if (!formData.primaryRole) missing.push('Primary Role');
@@ -114,11 +134,12 @@ export default function UserProfileScreen() {
             // Validate required fields
             const missingFields = validateForm();
             if (missingFields.length > 0) {
-                Alert.alert(
-                    'Missing Required Fields',
-                    `Please fill in the following required fields:\n\n${missingFields.map(f => `• ${f}`).join('\n')}`,
-                    [{ text: 'OK' }]
-                );
+                Toast.show({
+                    type: 'error',
+                    text1: 'Missing Required Fields',
+                    text2: `Please fill in: ${missingFields.join(', ')}`,
+                    visibilityTime: 4000,
+                });
                 return;
             }
 
@@ -126,17 +147,30 @@ export default function UserProfileScreen() {
 
             if (isEditMode) {
                 await profileService.updateProfile(formData);
-                Alert.alert('Success', 'Profile updated successfully!');
+                Toast.show({
+                    type: 'success',
+                    text1: 'Success',
+                    text2: 'Profile updated successfully!',
+                });
             } else {
                 await profileService.createProfile(formData);
-                Alert.alert('Success', 'Profile created successfully!');
+                Toast.show({
+                    type: 'success',
+                    text1: 'Success',
+                    text2: 'Profile created successfully!',
+                });
                 setIsEditMode(true);
             }
         } catch (error: any) {
             const errorMessage = error.response?.data?.errors
                 ? error.response.data.errors.join('\n')
                 : error.response?.data?.message || 'Failed to save profile';
-            Alert.alert('Error', errorMessage);
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: errorMessage,
+                visibilityTime: 4000,
+            });
         } finally {
             setSaving(false);
         }

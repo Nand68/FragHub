@@ -2,6 +2,8 @@ import React, { useEffect } from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { AuthProvider, useAuth } from '../context/AuthContext';
 import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import Toast from 'react-native-toast-message';
+import { toastConfig } from '../components/ToastConfig';
 
 function RootLayoutNav() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -31,10 +33,13 @@ function RootLayoutNav() {
   }
 
   return (
-    <Stack screenOptions={{ headerShown: false }}>
-      <Stack.Screen name="(auth)" />
-      <Stack.Screen name="(tabs)" />
-    </Stack>
+    <>
+      <Stack screenOptions={{ headerShown: false }}>
+        <Stack.Screen name="(auth)" />
+        <Stack.Screen name="(tabs)" />
+      </Stack>
+      <Toast config={toastConfig} />
+    </>
   );
 }
 

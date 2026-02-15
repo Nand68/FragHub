@@ -5,6 +5,7 @@ import { storage } from './storage.service';
 interface SignupData {
     email: string;
     password: string;
+    role: 'player' | 'organisation';
 }
 
 interface LoginData {
@@ -27,6 +28,8 @@ interface AuthResponse {
     message?: string;
     accessToken?: string;
     refreshToken?: string;
+    role?: string;
+    userId?: string;
 }
 
 export const authService = {
@@ -52,12 +55,18 @@ export const authService = {
     async login(data: LoginData): Promise<AuthResponse> {
         const response = await api.post(ENDPOINTS.AUTH.LOGIN, data);
 
-        // Store tokens
+        // Store tokens, role, and userId
         if (response.data.accessToken) {
             await storage.setAccessToken(response.data.accessToken);
         }
         if (response.data.refreshToken) {
             await storage.setRefreshToken(response.data.refreshToken);
+        }
+        if (response.data.role) {
+            await storage.setUserRole(response.data.role);
+        }
+        if (response.data.userId) {
+            await storage.setUserId(response.data.userId);
         }
 
         return response.data;

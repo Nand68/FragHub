@@ -6,14 +6,14 @@ import {
     Platform,
     ScrollView,
     TouchableOpacity,
-    Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import Toast from 'react-native-toast-message';
 import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
 import { authService } from '../../../services/auth.service';
-import  styles  from './styles';
+import styles from './styles';
 
 export default function ForgotPasswordScreen() {
     const router = useRouter();
@@ -40,7 +40,11 @@ export default function ForgotPasswordScreen() {
         setError('');
         try {
             await authService.forgotPassword(email);
-            Alert.alert('Success', 'OTP sent to your email!');
+            Toast.show({
+                type: 'success',
+                text1: 'Success',
+                text2: 'OTP sent to your email!',
+            });
             router.push({
                 pathname: '/(auth)/reset-password',
                 params: { email },

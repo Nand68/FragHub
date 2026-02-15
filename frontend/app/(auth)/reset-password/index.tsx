@@ -6,15 +6,15 @@ import {
     Platform,
     ScrollView,
     TouchableOpacity,
-    Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import Toast from 'react-native-toast-message';
 import { OTPInput } from '../../../components/ui/OTPInput';
 import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
 import { authService } from '../../../services/auth.service';
-import  styles  from './styles';
+import styles from './styles';
 
 export default function ResetPasswordScreen() {
     const router = useRouter();
@@ -73,14 +73,18 @@ export default function ResetPasswordScreen() {
         setLoading(true);
         try {
             await authService.resetPassword({ email, otp, newPassword });
-            Alert.alert('Success', 'Password reset successfully!', [
-                { text: 'OK', onPress: () => router.replace('/(auth)/login') },
-            ]);
+            Toast.show({
+                type: 'success',
+                text1: 'Success',
+                text2: 'Password reset successfully!',
+            });
+            setTimeout(() => router.replace('/(auth)/login'), 1500);
         } catch (error: any) {
-            Alert.alert(
-                'Error',
-                error.response?.data?.message || 'Failed to reset password. Please try again.'
-            );
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: error.response?.data?.message || 'Failed to reset password. Please try again.',
+            });
         } finally {
             setLoading(false);
         }

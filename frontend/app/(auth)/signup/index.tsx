@@ -6,20 +6,21 @@ import {
     Platform,
     ScrollView,
     TouchableOpacity,
-    Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import Toast from 'react-native-toast-message';
 import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
 import { authService } from '../../../services/auth.service';
-import  styles  from './styles';
+import styles from './styles';
 
 export default function SignupScreen() {
     const router = useRouter();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
+    const [role, setRole] = useState<'player' | 'organisation'>('player');
     const [loading, setLoading] = useState(false);
     const [errors, setErrors] = useState<{
         email?: string;
@@ -70,17 +71,22 @@ export default function SignupScreen() {
 
         setLoading(true);
         try {
-            await authService.signup({ email, password });
-            Alert.alert('Success', 'Account created! Please check your email for OTP.');
+            await authService.signup({ email, password, role });
+            Toast.show({
+                type: 'success',
+                text1: 'Success',
+                text2: 'Account created! Please check your email for OTP.',
+            });
             router.push({
                 pathname: '/(auth)/verify-otp',
                 params: { email },
             });
         } catch (error: any) {
-            Alert.alert(
-                'Signup Failed',
-                error.response?.data?.message || 'Something went wrong. Please try again.'
-            );
+            Toast.show({
+                type: 'error',
+                text1: 'Signup Failed',
+                text2: error.response?.data?.message || 'Something went wrong. Please try again.',
+            });
         } finally {
             setLoading(false);
         }
@@ -116,6 +122,44 @@ export default function SignupScreen() {
                             icon="mail"
                             error={errors.email}
                         />
+
+                        <View style={styles.roleContainer}>
+                            <Text style={styles.roleLabel}>I am a</Text>
+                            <View style={styles.roleSelector}>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.roleButton,
+                                        role === 'player' && styles.roleButtonActive,
+                                    ]}
+                                    onPress={() => setRole('player')}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.roleButtonText,
+                                            role === 'player' && styles.roleButtonTextActive,
+                                        ]}
+                                    >
+                                        Player
+                                    </Text>
+                                </TouchableOpacity>
+                                <TouchableOpacity
+                                    style={[
+                                        styles.roleButton,
+                                        role === 'organisation' && styles.roleButtonActive,
+                                    ]}
+                                    onPress={() => setRole('organisation')}
+                                >
+                                    <Text
+                                        style={[
+                                            styles.roleButtonText,
+                                            role === 'organisation' && styles.roleButtonTextActive,
+                                        ]}
+                                    >
+                                        Organisation
+                                    </Text>
+                                </TouchableOpacity>
+                            </View>
+                        </View>
 
                         <Input
                             label="Password"

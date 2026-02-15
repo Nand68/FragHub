@@ -6,10 +6,10 @@ import {
     Platform,
     ScrollView,
     TouchableOpacity,
-    Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter, useLocalSearchParams } from 'expo-router';
+import Toast from 'react-native-toast-message';
 import { OTPInput } from '../../../components/ui/OTPInput';
 import { Button } from '../../../components/ui/Button';
 import { authService } from '../../../services/auth.service';
@@ -52,9 +52,12 @@ export default function VerifyOTPScreen() {
         setError('');
         try {
             await authService.verifyOTP({ email, otp });
-            Alert.alert('Success', 'Email verified! Please login.', [
-                { text: 'OK', onPress: () => router.replace('/(auth)/login') }
-            ]);
+            Toast.show({
+                type: 'success',
+                text1: 'Success',
+                text2: 'Email verified! Please login.',
+            });
+            setTimeout(() => router.replace('/(auth)/login'), 1500);
         } catch (error: any) {
             setError(error.response?.data?.message || 'Invalid OTP. Please try again.');
         } finally {
@@ -67,14 +70,19 @@ export default function VerifyOTPScreen() {
         setError('');
         try {
             await authService.resendOTP(email);
-            Alert.alert('Success', 'OTP sent successfully!');
+            Toast.show({
+                type: 'success',
+                text1: 'Success',
+                text2: 'OTP sent successfully!',
+            });
             setCountdown(60);
             setCanResend(false);
         } catch (error: any) {
-            Alert.alert(
-                'Error',
-                error.response?.data?.message || 'Failed to resend OTP. Please try again.'
-            );
+            Toast.show({
+                type: 'error',
+                text1: 'Error',
+                text2: error.response?.data?.message || 'Failed to resend OTP. Please try again.',
+            });
         } finally {
             setResendLoading(false);
         }

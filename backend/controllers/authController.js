@@ -12,9 +12,13 @@ const generateOTP = () => Math.floor(100000 + Math.random() * 900000).toString()
 
 // ================= SIGNUP =================
 exports.signup = async (req, res) => {
-  const { email, password } = req.body;
+  const { email, password, role } = req.body;
 
   try {
+    // Validate role
+    if (!role || !['player', 'organisation'].includes(role))
+      return res.status(400).json({ message: "Invalid role. Must be 'player' or 'organisation'" });
+
     if (await User.findOne({ email }))
       return res.status(400).json({ message: "User already exists" });
 
@@ -26,6 +30,7 @@ exports.signup = async (req, res) => {
     const user = await User.create({
       email,
       password: hashedPassword,
+      role,
       otp: hashedOTP,
       otpExpires: Date.now() + 10 * 60 * 1000,
     });
@@ -87,7 +92,12 @@ exports.login = async (req, res) => {
     user.refreshToken = hashedRefresh;
     await user.save();
 
-    res.json({ accessToken, refreshToken });
+    res.json({
+      accessToken,
+      refreshToken,
+      role: user.role,
+      userId: user._id
+    });
 
   } catch (err) {
     res.status(500).json({ message: err.message });

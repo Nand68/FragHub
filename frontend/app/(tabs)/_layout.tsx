@@ -1,7 +1,10 @@
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { useAuth } from '../../context/AuthContext';
 
 export default function TabsLayout() {
+    const { userRole } = useAuth();
+
     return (
         <Tabs
             screenOptions={{
@@ -31,6 +34,17 @@ export default function TabsLayout() {
                     ),
                 }}
             />
+            {userRole === 'player' && (
+                <Tabs.Screen
+                    name="profile"
+                    options={{
+                        title: 'Profile',
+                        tabBarIcon: ({ color, size }) => (
+                            <Ionicons name="person" size={size} color={color} />
+                        ),
+                    }}
+                />
+            )}
         </Tabs>
     );
 }

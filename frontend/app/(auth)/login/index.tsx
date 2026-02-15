@@ -6,15 +6,15 @@ import {
     Platform,
     ScrollView,
     TouchableOpacity,
-    Alert,
 } from 'react-native';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import Toast from 'react-native-toast-message';
 import { Input } from '../../../components/ui/Input';
 import { Button } from '../../../components/ui/Button';
 import { authService } from '../../../services/auth.service';
 import { useAuth } from '../../../context/AuthContext';
-import  styles  from './styles';
+import styles from './styles';
 
 export default function LoginScreen() {
     const router = useRouter();
@@ -51,13 +51,14 @@ export default function LoginScreen() {
             const response = await authService.login({ email, password });
 
             if (response.accessToken && response.refreshToken) {
-                await login(response.accessToken, response.refreshToken);
+                await login(response.accessToken, response.refreshToken, response.role, response.userId);
             }
         } catch (error: any) {
-            Alert.alert(
-                'Login Failed',
-                error.response?.data?.message || 'Invalid credentials. Please try again.'
-            );
+            Toast.show({
+                type: 'error',
+                text1: 'Login Failed',
+                text2: error.response?.data?.message || 'Invalid credentials. Please try again.',
+            });
         } finally {
             setLoading(false);
         }
