@@ -1,104 +1,114 @@
-import axios, { AxiosInstance, AxiosError, InternalAxiosRequestConfig } from 'axios';
-import { API_CONFIG } from '../constants/config';
-import { storage } from './storage.service';
+import axios from 'axios';
+import * as SecureStore from 'expo-secure-store';
+import { API_BASE_URL } from '../constants/config';
 
-// Create axios instance
-const api: AxiosInstance = axios.create({
-    baseURL: API_CONFIG.BASE_URL,
-    timeout: API_CONFIG.TIMEOUT,
-    headers: {
-        'Content-Type': 'application/json',
-    },
+let accessToken: string | null = null;
+let refreshToken: string | null = null;
+
+export const setTokens = (tokens: { accessToken: string; refreshToken: string }) => {
+  accessToken = tokens.accessToken;
+  refreshToken = tokens.refreshToken;
+};
+
+export const clearTokens = () => {
+  accessToken = null;
+  refreshToken = null;
+};
+
+export const TOKEN_STORAGE_KEY = 'fraghub_tokens';
+
+export const saveTokensToStorage = async (tokens: {
+  accessToken: string;
+  refreshToken: string;
+}) => {
+  await SecureStore.setItemAsync(TOKEN_STORAGE_KEY, JSON.stringify(tokens));
+};
+
+export const loadTokensFromStorage = async () => {
+  const stored = await SecureStore.getItemAsync(TOKEN_STORAGE_KEY);
+  if (!stored) return null;
+  try {
+    const parsed = JSON.parse(stored) as { accessToken: string; refreshToken: string };
+    accessToken = parsed.accessToken;
+    refreshToken = parsed.refreshToken;
+    return parsed;
+  } catch {
+    return null;
+  }
+};
+
+export const deleteTokensFromStorage = async () => {
+  await SecureStore.deleteItemAsync(TOKEN_STORAGE_KEY);
+};
+
+export const api = axios.create({
+  baseURL: API_BASE_URL,
+  timeout: 15000,
 });
 
-// Request interceptor - Add token to requests
-api.interceptors.request.use(
-    async (config: InternalAxiosRequestConfig) => {
-        const token = await storage.getAccessToken();
-        if (token && config.headers) {
-            config.headers.Authorization = `Bearer ${token}`;
-        }
-        return config;
-    },
-    (error: AxiosError) => {
-        return Promise.reject(error);
-    }
-);
+api.interceptors.request.use((config) => {
+  if (accessToken) {
+    config.headers = {
+      ...config.headers,
+      Authorization: `Bearer ${accessToken}`,
+    };
+  }
+  return config;
+});
 
-// Response interceptor - Handle token refresh
 let isRefreshing = false;
-let failedQueue: any[] = [];
+let refreshQueue: Array<(token: string | null) => void> = [];
 
-const processQueue = (error: any, token: string | null = null) => {
-    failedQueue.forEach((prom) => {
-        if (error) {
-            prom.reject(error);
-        } else {
-            prom.resolve(token);
-        }
-    });
-
-    failedQueue = [];
+const processQueue = (token: string | null) => {
+  refreshQueue.forEach((resolve) => resolve(token));
+  refreshQueue = [];
 };
 
 api.interceptors.response.use(
-    (response) => response,
-    async (error: AxiosError) => {
-        const originalRequest: any = error.config;
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
 
-        // If error is 401 and we haven't tried to refresh yet
-        if (error.response?.status === 401 && !originalRequest._retry) {
-            if (isRefreshing) {
-                // If already refreshing, queue this request
-                return new Promise((resolve, reject) => {
-                    failedQueue.push({ resolve, reject });
-                })
-                    .then((token) => {
-                        if (originalRequest.headers) {
-                            originalRequest.headers.Authorization = `Bearer ${token}`;
-                        }
-                        return api(originalRequest);
-                    })
-                    .catch((err) => Promise.reject(err));
-            }
-
-            originalRequest._retry = true;
-            isRefreshing = true;
-
-            try {
-                const refreshToken = await storage.getRefreshToken();
-                if (!refreshToken) {
-                    throw new Error('No refresh token');
-                }
-
-                // Call refresh token endpoint
-                const response = await axios.post(
-                    `${API_CONFIG.BASE_URL}/auth/refresh-token`,
-                    { refreshToken }
-                );
-
-                const { accessToken } = response.data;
-                await storage.setAccessToken(accessToken);
-
-                processQueue(null, accessToken);
-
-                if (originalRequest.headers) {
-                    originalRequest.headers.Authorization = `Bearer ${accessToken}`;
-                }
-
-                return api(originalRequest);
-            } catch (refreshError) {
-                processQueue(refreshError, null);
-                await storage.clearAll();
-                // You can redirect to login here if needed
-                return Promise.reject(refreshError);
-            } finally {
-                isRefreshing = false;
-            }
+    if (error.response?.status === 401 && !originalRequest._retry && refreshToken) {
+      if (isRefreshing) {
+        const token = await new Promise<string | null>((resolve) => {
+          refreshQueue.push(resolve);
+        });
+        if (token) {
+          originalRequest.headers.Authorization = `Bearer ${token}`;
+          return api(originalRequest);
         }
-
         return Promise.reject(error);
+      }
+
+      originalRequest._retry = true;
+      isRefreshing = true;
+
+      try {
+        const { data } = await axios.post(`${API_BASE_URL}/auth/refresh-token`, {
+          refreshToken,
+        });
+
+        accessToken = data.accessToken;
+        if (accessToken && refreshToken) {
+          await saveTokensToStorage({ accessToken, refreshToken });
+        }
+        processQueue(accessToken);
+
+        originalRequest.headers.Authorization = `Bearer ${accessToken}`;
+        return api(originalRequest);
+      } catch (refreshError) {
+        processQueue(null);
+        await deleteTokensFromStorage();
+        accessToken = null;
+        refreshToken = null;
+        return Promise.reject(refreshError);
+      } finally {
+        isRefreshing = false;
+      }
     }
+
+    return Promise.reject(error);
+  }
 );
 
-export default api;

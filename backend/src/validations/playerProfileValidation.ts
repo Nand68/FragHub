@@ -1,0 +1,48 @@
+import Joi from 'joi';
+import { Gender, Device, FingerSetup, PlayingStyle } from '../models/PlayerProfile';
+
+export const createProfileSchema = Joi.object({
+  name: Joi.string().required(),
+  age: Joi.number().min(13).max(100).required(),
+  gender: Joi.string().valid(...Object.values(Gender)).required(),
+  country: Joi.string().required(),
+  game_id: Joi.string().required(),
+  device: Joi.string().valid(...Object.values(Device)).required(),
+  finger_setup: Joi.string().valid(...Object.values(FingerSetup)).required(),
+  kd_ratio: Joi.number().min(0).required(),
+  average_damage: Joi.number().min(0).required(),
+  roles: Joi.array().items(Joi.string()).min(1).required(),
+  playing_style: Joi.string().valid(...Object.values(PlayingStyle)).required(),
+  preferred_maps: Joi.array().items(Joi.string()).min(1).required(),
+  ban_history: Joi.boolean().required(),
+  years_experience: Joi.number().min(0).optional(),
+  youtube_url: Joi.string().uri().optional(),
+  instagram_url: Joi.string().uri().optional(),
+  tournaments_played: Joi.array().items(Joi.string()).optional(),
+  other_tournament_name: Joi.string().optional(),
+  bio: Joi.string().max(500).optional(),
+  previous_organization: Joi.string().optional(),
+});
+
+export const updateProfileSchema = Joi.object({
+  name: Joi.string().optional(),
+  age: Joi.number().min(13).max(100).optional(),
+  gender: Joi.string().valid(...Object.values(Gender)).optional(),
+  country: Joi.string().optional(),
+  game_id: Joi.string().optional(),
+  device: Joi.string().valid(...Object.values(Device)).optional(),
+  finger_setup: Joi.string().valid(...Object.values(FingerSetup)).optional(),
+  kd_ratio: Joi.number().min(0).optional(),
+  average_damage: Joi.number().min(0).optional(),
+  roles: Joi.array().items(Joi.string()).min(1).optional(),
+  playing_style: Joi.string().valid(...Object.values(PlayingStyle)).optional(),
+  preferred_maps: Joi.array().items(Joi.string()).min(1).optional(),
+  ban_history: Joi.boolean().optional(),
+  years_experience: Joi.number().min(0).optional(),
+  youtube_url: Joi.string().uri().optional(),
+  instagram_url: Joi.string().uri().optional(),
+  tournaments_played: Joi.array().items(Joi.string()).optional(),
+  other_tournament_name: Joi.string().optional(),
+  bio: Joi.string().max(500).optional(),
+  previous_organization: Joi.string().optional(),
+});

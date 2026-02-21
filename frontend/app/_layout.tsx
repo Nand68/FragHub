@@ -1,62 +1,60 @@
-import React, { useEffect } from 'react';
+import React from 'react';
 import { Stack, useRouter, useSegments } from 'expo-router';
-import { AuthProvider, useAuth } from '../context/AuthContext';
-import { ActivityIndicator, View, StyleSheet } from 'react-native';
+import { PaperProvider } from 'react-native-paper';
+import { StatusBar } from 'expo-status-bar';
 import Toast from 'react-native-toast-message';
-import { toastConfig } from '../components/ToastConfig';
+import { AuthProvider, useAuth } from '../context/AuthContext';
+import { SocketProvider } from '../context/SocketContext';
+import { paperDarkTheme } from '../constants/theme';
+import { View, ActivityIndicator } from 'react-native';
 
-function RootLayoutNav() {
-  const { isAuthenticated, isLoading } = useAuth();
+function AuthGate() {
+  const { user, initializing } = useAuth();
   const segments = useSegments();
   const router = useRouter();
 
-  useEffect(() => {
-    if (isLoading) return;
+  React.useEffect(() => {
+    if (initializing) return;
 
     const inAuthGroup = segments[0] === '(auth)';
 
-    if (!isAuthenticated && !inAuthGroup) {
-      // Redirect to login if not authenticated
-      router.replace('/(auth)/login');
-    } else if (isAuthenticated && inAuthGroup) {
-      // Redirect to tabs if authenticated
-      router.replace('/(tabs)');
+    if (!user && !inAuthGroup) {
+      router.replace('/welcome' as any);
+    } else if (user && inAuthGroup) {
+      router.replace('/home' as any);
     }
-  }, [isAuthenticated, isLoading, segments]);
+  }, [user, initializing, segments, router]);
 
-  if (isLoading) {
+  if (initializing) {
     return (
-      <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#8B5CF6" />
+      <View
+        style={{
+          flex: 1,
+          backgroundColor: '#050811',
+          alignItems: 'center',
+          justifyContent: 'center',
+        }}
+      >
+        <ActivityIndicator size="large" color="#6366f1" />
       </View>
     );
   }
 
-  return (
-    <>
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="(auth)" />
-        <Stack.Screen name="(tabs)" />
-      </Stack>
-      <Toast config={toastConfig} />
-    </>
-  );
+  return <Stack screenOptions={{ headerShown: false }} />;
 }
 
 export default function RootLayout() {
   return (
-    <AuthProvider>
-      <RootLayoutNav />
-    </AuthProvider>
+    <PaperProvider theme={paperDarkTheme}>
+      <AuthProvider>
+        <SocketProvider>
+          <StatusBar style="light" />
+          <AuthGate />
+          <Toast />
+        </SocketProvider>
+      </AuthProvider>
+    </PaperProvider>
   );
 }
 
-const styles = StyleSheet.create({
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#0F172A',
-  },
-});
 

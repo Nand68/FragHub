@@ -1,94 +1,151 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { storage } from '../services/storage.service';
-import { authService } from '../services/auth.service';
+import React, { createContext, useContext, useEffect, useMemo, useState } from 'react';
+import * as SecureStore from 'expo-secure-store';
+import {
+  api,
+  clearTokens,
+  loadTokensFromStorage,
+  saveTokensToStorage,
+  setTokens,
+  deleteTokensFromStorage,
+} from '../services/api';
 
-interface AuthContextType {
-    isAuthenticated: boolean;
-    isLoading: boolean;
-    userRole: string | null;
-    userId: string | null;
-    login: (accessToken: string, refreshToken: string, role?: string, userId?: string) => Promise<void>;
-    logout: () => Promise<void>;
-    checkAuth: () => Promise<void>;
-}
+export type UserRole = 'PLAYER' | 'ORGANIZATION';
 
-const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-export const useAuth = () => {
-    const context = useContext(AuthContext);
-    if (!context) {
-        throw new Error('useAuth must be used within AuthProvider');
-    }
-    return context;
+type User = {
+  id: string;
+  email: string;
+  role: UserRole;
 };
+
+type AuthState = {
+  user: User | null;
+  accessToken: string | null;
+  refreshToken: string | null;
+  initializing: boolean;
+};
+
+type AuthContextValue = AuthState & {
+  signup: (payload: { email: string; password: string; role: UserRole }) => Promise<void>;
+  verifyOtp: (payload: { email: string; otp: string }) => Promise<void>;
+  login: (payload: { email: string; password: string }) => Promise<void>;
+  requestReset: (payload: { email: string }) => Promise<void>;
+  resetPassword: (payload: { email: string; otp: string; newPassword: string }) => Promise<void>;
+  logout: () => Promise<void>;
+};
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined);
+
+const USER_STORAGE_KEY = 'fraghub_user';
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [isAuthenticated, setIsAuthenticated] = useState(false);
-    const [isLoading, setIsLoading] = useState(true);
-    const [userRole, setUserRole] = useState<string | null>(null);
-    const [userId, setUserId] = useState<string | null>(null);
+  const [state, setState] = useState<AuthState>({
+    user: null,
+    accessToken: null,
+    refreshToken: null,
+    initializing: true,
+  });
 
-    const checkAuth = async () => {
-        try {
-            const token = await storage.getAccessToken();
-            const role = await storage.getUserRole();
-            const id = await storage.getUserId();
-            setIsAuthenticated(!!token);
-            setUserRole(role);
-            setUserId(id);
-        } catch (error) {
-            setIsAuthenticated(false);
-            setUserRole(null);
-            setUserId(null);
-        } finally {
-            setIsLoading(false);
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const tokens = await loadTokensFromStorage();
+        let user: User | null = null;
+
+        const storedUser = await SecureStore.getItemAsync(USER_STORAGE_KEY);
+        if (storedUser) {
+          try {
+            user = JSON.parse(storedUser) as User;
+          } catch {
+            user = null;
+          }
         }
+
+        setState({
+          user,
+          accessToken: tokens?.accessToken ?? null,
+          refreshToken: tokens?.refreshToken ?? null,
+          initializing: false,
+        });
+      } finally {
+        setState((prev) => ({ ...prev, initializing: false }));
+      }
     };
+    void init();
+  }, []);
 
-    useEffect(() => {
-        checkAuth();
-    }, []);
+  const signup: AuthContextValue['signup'] = async (payload) => {
+    await api.post('/auth/signup', {
+      ...payload,
+      role: payload.role.toLowerCase(), // backend expects 'player' | 'organization'
+    });
+  };
 
-    const login = async (accessToken: string, refreshToken: string, role?: string, userId?: string) => {
-        await storage.setAccessToken(accessToken);
-        await storage.setRefreshToken(refreshToken);
-        if (role) {
-            await storage.setUserRole(role);
-            setUserRole(role);
-        }
-        if (userId) {
-            await storage.setUserId(userId);
-            setUserId(userId);
-        }
-        setIsAuthenticated(true);
+  const verifyOtp: AuthContextValue['verifyOtp'] = async (payload) => {
+    await api.post('/auth/verify-otp', payload);
+  };
+
+  const login: AuthContextValue['login'] = async (payload) => {
+    const { data } = await api.post<{
+      accessToken: string;
+      refreshToken: string;
+      user: User;
+    }>('/auth/login', payload);
+
+    const tokens = {
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken,
     };
+    setTokens(tokens);
+    await saveTokensToStorage(tokens);
+    await SecureStore.setItemAsync(USER_STORAGE_KEY, JSON.stringify(data.user));
 
-    const logout = async () => {
-        try {
-            // Optionally call backend logout
-            // await authService.logout(userId);
-            await storage.clearAll();
-            setIsAuthenticated(false);
-            setUserRole(null);
-            setUserId(null);
-        } catch (error) {
-            console.error('Logout error:', error);
-        }
-    };
+    setState({
+      user: data.user,
+      accessToken: data.accessToken,
+      refreshToken: data.refreshToken,
+      initializing: false,
+    });
+  };
 
-    return (
-        <AuthContext.Provider
-            value={{
-                isAuthenticated,
-                isLoading,
-                userRole,
-                userId,
-                login,
-                logout,
-                checkAuth,
-            }}
-        >
-            {children}
-        </AuthContext.Provider>
-    );
+  const requestReset: AuthContextValue['requestReset'] = async (payload) => {
+    await api.post('/auth/request-reset', payload);
+  };
+
+  const resetPassword: AuthContextValue['resetPassword'] = async (payload) => {
+    await api.post('/auth/reset-password', payload);
+  };
+
+  const logout: AuthContextValue['logout'] = async () => {
+    await deleteTokensFromStorage();
+    await SecureStore.deleteItemAsync(USER_STORAGE_KEY);
+    clearTokens();
+    setState({
+      user: null,
+      accessToken: null,
+      refreshToken: null,
+      initializing: false,
+    });
+  };
+
+  const value = useMemo<AuthContextValue>(
+    () => ({
+      ...state,
+      signup,
+      verifyOtp,
+      login,
+      requestReset,
+      resetPassword,
+      logout,
+    }),
+    [state]
+  );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
+
+export const useAuth = () => {
+  const ctx = useContext(AuthContext);
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider');
+  return ctx;
+};
+
