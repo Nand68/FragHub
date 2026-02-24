@@ -7,7 +7,7 @@ import { matchesFilters } from '../utils/matchesFilters';
 
 const kafka = new Kafka({
     clientId: 'scouting-app-consumer',
-    brokers: ['localhost:9092'],
+    brokers: ['kafka:9092'],
 });
 
 const consumer = kafka.consumer({ groupId: 'scouting-application-group' });

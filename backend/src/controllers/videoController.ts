@@ -4,7 +4,7 @@ import Video from '../models/Video';
 import cloudinary from '../config/cloudinary';
 import { AppError } from '../utils/AppError';
 
-export const uploadVideo = async (req: Request, res: Response, next: NextFunction) => {
+export const uploadVideo = async (req: any , res: Response, next: NextFunction) => {
   try {
     if (!req.file) {
       return next(new AppError('No video file provided', 400));
