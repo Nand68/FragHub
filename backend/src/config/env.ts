@@ -15,5 +15,10 @@ export const config = {
     user: process.env.SMTP_USER!,
     pass: process.env.SMTP_PASS!,
   },
+  cloudinary: {
+    cloudName: process.env.CLOUDINARY_CLOUD_NAME!,
+    apiKey: process.env.CLOUDINARY_API_KEY!,
+    apiSecret: process.env.CLOUDINARY_API_SECRET!,
+  },
   nodeEnv: process.env.NODE_ENV || 'development',
 };
