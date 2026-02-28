@@ -46,7 +46,7 @@ export const api = axios.create({
   timeout: 15000,
 });
 
-api.interceptors.request.use((config) => {
+api.interceptors.request.use((config : any) => {
   if (accessToken) {
     config.headers = {
       ...config.headers,

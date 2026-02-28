@@ -10,6 +10,7 @@ import organizationRoutes from './routes/organizationRoutes';
 import scoutingRoutes from './routes/scoutingRoutes';
 import applicationRoutes from './routes/applicationRoutes';
 import notificationRoutes from './routes/notificationRoutes';
+import videoRoutes from './routes/videoRoutes';
 
 const app = express();
 
@@ -32,6 +33,7 @@ app.use('/api/organization', organizationRoutes);
 app.use('/api/scouting', scoutingRoutes);
 app.use('/api/applications', applicationRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/videos', videoRoutes);
 
 app.get('/health', (req, res) => {
   res.status(200).json({ status: 'OK', message: 'Server is running' });
