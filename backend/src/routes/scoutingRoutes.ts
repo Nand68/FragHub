@@ -14,7 +14,7 @@ router.use(authenticate, authorize(UserRole.ORGANIZATION));
 
 router.post('/', validate(scoutingValidation.createScoutingSchema), scoutingController.createScouting);
 router.get('/my/active', scoutingController.getMyActiveScouting);
-router.put('/:scoutingId', validate(scoutingValidation.updateScoutingSchema), scoutingController.updateScouting);
+// PUT /scouting/:id intentionally removed — scoutings are immutable once created.
 router.delete('/:scoutingId', scoutingController.cancelScouting);
 
 export default router;

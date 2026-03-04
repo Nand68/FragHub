@@ -5,6 +5,7 @@ export const signupSchema = Joi.object({
   email: Joi.string().email().required(),
   password: Joi.string().min(8).required(),
   role: Joi.string().valid(...Object.values(UserRole)).required(),
+  username: Joi.string().alphanum().min(3).max(30).required(),
 });
 
 export const verifyOTPSchema = Joi.object({
@@ -29,4 +30,8 @@ export const resetPasswordSchema = Joi.object({
 
 export const refreshTokenSchema = Joi.object({
   refreshToken: Joi.string().required(),
+});
+
+export const updateAvatarSchema = Joi.object({
+  avatarUrl: Joi.string().uri().required(),
 });

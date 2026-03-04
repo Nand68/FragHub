@@ -61,7 +61,9 @@ export type RosterPlayer = {
   kd_ratio: number;
   average_damage: number;
   roles: string[];
-
+  device?: string;
+  years_experience?: number;
+  userId?: { _id: string; email: string; username?: string; avatarUrl?: string };
 };
 
 export async function getRoster(): Promise<RosterPlayer[]> {
@@ -83,6 +85,7 @@ export type Teammate = {
   roles: string[];
   device?: string;
   country?: string;
+  userId?: { _id: string; email: string; username?: string; avatarUrl?: string };
 };
 
 export type MyOrganizationData = {

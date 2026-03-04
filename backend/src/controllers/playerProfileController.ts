@@ -30,7 +30,7 @@ export const getMyOrganization = async (req: AuthRequest, res: Response, next: N
     if (!organization) return res.status(200).json({ success: true, data: null });
 
     // All players in the same org (including self)
-    const teammates = await PlayerProfile.find({ currentOrganization: organization._id });
+    const teammates = await PlayerProfile.find({ currentOrganization: organization._id }).populate('userId', '_id email username avatarUrl');
 
     res.status(200).json({ success: true, data: { organization, teammates } });
   } catch (error) {

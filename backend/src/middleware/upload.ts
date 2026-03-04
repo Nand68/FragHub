@@ -4,10 +4,10 @@ import { AppError } from '../utils/AppError';
 const storage = multer.memoryStorage();
 
 const fileFilter = (req: any, file: Express.Multer.File, cb: multer.FileFilterCallback) => {
-  if (file.mimetype.startsWith('video/')) {
+  if (file.mimetype.startsWith('video/') || file.mimetype.startsWith('image/')) {
     cb(null, true);
   } else {
-    cb(new AppError('Only video files are allowed', 400) as any);
+    cb(new AppError('Only image and video files are allowed', 400) as any);
   }
 };
 

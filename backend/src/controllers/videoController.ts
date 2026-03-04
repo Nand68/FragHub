@@ -4,7 +4,7 @@ import Video from '../models/Video';
 import cloudinary from '../config/cloudinary';
 import { AppError } from '../utils/AppError';
 
-export const uploadVideo = async (req: any , res: Response, next: NextFunction) => {
+export const uploadVideo = async (req: any, res: Response, next: NextFunction) => {
   try {
     if (!req.file) {
       return next(new AppError('No video file provided', 400));
@@ -33,11 +33,12 @@ export const uploadVideo = async (req: any , res: Response, next: NextFunction) 
 
     const uploadResult = result as any;
 
-    // Generate reel-optimized video URL
+    // Generate reel-optimized video URL — use 'fit' (letterbox) not 'fill' (crop)
+    // This preserves the original aspect ratio without zooming/distorting
     const reelUrl = cloudinary.url(uploadResult.public_id, {
       resource_type: 'video',
       transformation: [
-        { width: 1080, height: 1920, crop: 'fill', gravity: 'auto' },
+        { width: 1080, height: 1920, crop: 'pad', background: 'black' },
         { quality: 'auto' },
         { fetch_format: 'mp4' },
       ],
@@ -46,6 +47,7 @@ export const uploadVideo = async (req: any , res: Response, next: NextFunction) 
     // Generate thumbnail
     const thumbnailUrl = cloudinary.url(uploadResult.public_id, {
       resource_type: 'video',
+      format: 'jpg',
       transformation: [
         { width: 400, height: 700, crop: 'fill' },
         { start_offset: '1' },
@@ -75,7 +77,7 @@ export const uploadVideo = async (req: any , res: Response, next: NextFunction) 
 export const getRandomVideos = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const limit = Math.min(parseInt(req.query.limit as string) || 10, 50);
-    
+
     const videos = await Video.aggregate([
       { $sample: { size: limit } },
       {
@@ -97,8 +99,12 @@ export const getRandomVideos = async (req: Request, res: Response, next: NextFun
           width: 1,
           height: 1,
           createdAt: 1,
+          userId: 1,
+          'user._id': 1,
           'user.email': 1,
           'user.role': 1,
+          'user.username': 1,
+          'user.avatarUrl': 1,
         },
       },
     ]);
@@ -116,7 +122,7 @@ export const getRandomVideos = async (req: Request, res: Response, next: NextFun
 export const getUserVideos = async (req: Request, res: Response, next: NextFunction) => {
   try {
     const userId = (req as any).user.id;
-    
+
     const videos = await Video.find({ userId })
       .sort({ createdAt: -1 })
       .select('-likedBy');
@@ -128,7 +134,7 @@ export const getUserVideos = async (req: Request, res: Response, next: NextFunct
     });
   } catch (error) {
     next(error);
-  } 
+  }
 };
 
 export const deleteVideo = async (req: Request, res: Response, next: NextFunction) => {
@@ -196,3 +202,25 @@ export const toggleLike = async (req: Request, res: Response, next: NextFunction
   }
 };
 
+export const getUserVideosByUserId = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userId } = req.params;
+
+    if (!userId) {
+      return next(new AppError('User ID is required', 400));
+    }
+
+    const videos = await Video.find({ userId })
+      .sort({ createdAt: -1 })
+      .select('-likedBy')
+      .limit(30);
+
+    res.status(200).json({
+      success: true,
+      count: videos.length,
+      data: videos,
+    });
+  } catch (error) {
+    next(error);
+  }
+};

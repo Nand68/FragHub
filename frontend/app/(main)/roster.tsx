@@ -59,7 +59,7 @@ function PlayerCard({
   player: any;
   removingId: string | null;
   onRemove: (id: string) => void;
-  onViewProfile: (id: string, name: string) => void;
+  onViewProfile: (player: any, name: string) => void;
 }) {
   const color = avatarColor(player.name ?? 'A');
   const isBusy = removingId === player._id;
@@ -67,7 +67,7 @@ function PlayerCard({
 
   return (
     <TouchableOpacity
-      onPress={() => onViewProfile(player._id, player.name ?? 'Player')}
+      onPress={() => onViewProfile(player, player.name ?? 'Player')}
       activeOpacity={0.92}
       style={cardS.wrapper}
     >
@@ -251,8 +251,9 @@ export default function RosterScreen() {
     }
   };
 
-  const onViewProfile = (id: string, name: string) => {
-    router.push({ pathname: '/player-profile' as any, params: { profileId: id, playerName: name } });
+  const onViewProfile = (player: any, name: string) => {
+    const userId = String(player?.userId?._id ?? player?.userId ?? player._id);
+    router.push({ pathname: '/player-profile' as any, params: { profileId: userId, playerName: name } });
   };
 
   return (

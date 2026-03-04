@@ -104,13 +104,7 @@ export async function getMyActiveScouting(): Promise<Scouting | null> {
   }
 }
 
-export async function updateScouting(
-  scoutingId: string,
-  payload: Partial<CreateScoutingPayload>
-): Promise<Scouting> {
-  const { data } = await api.put<ScoutingResponse>(`/scouting/${scoutingId}`, payload);
-  return data.data;
-}
+
 
 export async function cancelScouting(scoutingId: string) {
   await api.delete(`/scouting/${scoutingId}`);

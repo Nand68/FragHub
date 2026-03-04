@@ -6,6 +6,7 @@ import {
   uploadVideo,
   getRandomVideos,
   getUserVideos,
+  getUserVideosByUserId,
   deleteVideo,
   toggleLike,
 } from '../controllers/videoController';
@@ -24,6 +25,8 @@ router.post(
 router.get('/random', authenticate, getRandomVideos);
 
 router.get('/my-videos', authenticate, getUserVideos);
+
+router.get('/user/:userId', authenticate, getUserVideosByUserId);
 
 router.delete('/:videoId', authenticate, validate(videoIdSchema, 'params'), deleteVideo);
 

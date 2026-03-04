@@ -29,6 +29,7 @@ export default function SignupScreen() {
   const { signup } = useAuth();
 
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [role, setRole] = useState<UserRole>('PLAYER');
@@ -47,8 +48,12 @@ export default function SignupScreen() {
   };
 
   const onSubmit = async () => {
-    if (!email || !password || !confirmPassword) {
+    if (!username || !email || !password || !confirmPassword) {
       Toast.show({ type: 'error', text1: 'All fields are required' });
+      return;
+    }
+    if (username.trim().length < 3) {
+      Toast.show({ type: 'error', text1: 'Username must be at least 3 characters' });
       return;
     }
     if (password.length < 6) {
@@ -62,7 +67,7 @@ export default function SignupScreen() {
 
     try {
       setLoading(true);
-      await signup({ email: email.trim().toLowerCase(), password, role });
+      await signup({ email: email.trim().toLowerCase(), password, role, username: username.trim() });
       Toast.show({
         type: 'success',
         text1: 'OTP sent',
@@ -142,6 +147,16 @@ export default function SignupScreen() {
 
         {/* Fields */}
         <View style={styles.form}>
+          <InputField
+            label="Username"
+            value={username}
+            onChangeText={setUsername}
+            autoCapitalize="none"
+            icon="at-outline"
+            focused={focusedField === 'username'}
+            onFocus={() => setFocusedField('username')}
+            onBlur={() => setFocusedField(null)}
+          />
           <InputField
             label="Email address"
             value={email}
@@ -268,7 +283,7 @@ function InputField({
         keyboardType={keyboardType}
         autoCapitalize={autoCapitalize}
         onFocus={onFocus}
-        cursorColor={ACCENT}          
+        cursorColor={ACCENT}
         selectionColor="rgba(200, 241, 53, 0.4)"
         onBlur={onBlur}
         style={iStyles.input}

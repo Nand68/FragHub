@@ -26,7 +26,6 @@ import {
   listActiveScoutings,
   getMyActiveScouting,
   createScouting,
-  updateScouting,
   cancelScouting,
   Scouting,
   CreateScoutingPayload,
@@ -548,7 +547,6 @@ export default function ScoutingScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [cancelling, setCancelling] = useState(false);
-  const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState<CreateScoutingPayload>(defaultForm);
   const [playersText, setPlayersText] = useState('1'); // separate string state so user can freely edit
 
@@ -580,27 +578,7 @@ export default function ScoutingScreen() {
           if (!active && org) {
             setForm((prev) => ({ ...prev, organization_name: org.organization_name, country: org.country }));
           }
-          if (active) {
-            setForm({
-              ...defaultForm,
-              organization_name: active.organization_name,
-              organization_description: active.organization_description,
-              country: active.country,
-              salary_type: active.salary_type,
-              salary_min_usd: active.salary_min_usd,
-              salary_max_usd: active.salary_max_usd,
-              contract_duration: active.contract_duration,
-              device_provided: active.device_provided,
-              bootcamp_required: active.bootcamp_required,
-              players_required: active.players_required,
-              allowed_devices: active.allowed_devices ?? ['mobile'],
-              allowed_genders: active.allowed_genders ?? ['male', 'female'],
-            });
-            setPlayersText(String(active.players_required ?? 1));
-            setSelectedRoles(active.required_roles ?? []);
-            setSelectedMaps(active.preferred_maps_required ?? []);
-            setSelectedTournaments(active.required_tournaments ?? []);
-          }
+          // No pre-population for active scouting — form is for creation only
         } else {
           const data = await listActiveScoutings();
           setScoutings(data);
@@ -639,6 +617,16 @@ export default function ScoutingScreen() {
     return () => { socket.off('scouting:new', handler); };
   }, [socket, isOrg]);
 
+  // Real-time: spots count updated (org view only — emitted after a player is selected)
+  useEffect(() => {
+    if (!socket || !isOrg) return;
+    const handler = ({ selected_count, scouting_status }: { selected_count: number; scouting_status: string }) => {
+      setMyScouting((prev) => prev ? { ...prev, selected_count, scouting_status: scouting_status as any } : prev);
+    };
+    socket.on('scouting:updated', handler);
+    return () => { socket.off('scouting:updated', handler); };
+  }, [socket, isOrg]);
+
   const handleCreateScouting = async () => {
     if (!form.organization_name?.trim() || !form.country?.trim()) {
       Toast.show({ type: 'error', text1: 'Organization name and country are required' });
@@ -667,7 +655,6 @@ export default function ScoutingScreen() {
       setSaving(true);
       const created = await createScouting(payload);
       setMyScouting(created);
-      setShowForm(false);
       Toast.show({ type: 'success', text1: 'Scouting created!' });
     } catch (err: any) {
       Toast.show({ type: 'error', text1: err?.response?.data?.message ?? 'Failed to create' });
@@ -676,29 +663,6 @@ export default function ScoutingScreen() {
     }
   };
 
-  const handleUpdateScouting = async () => {
-    if (!myScouting) return;
-    try {
-      setSaving(true);
-      const updated = await updateScouting(myScouting._id, {
-        organization_description: form.organization_description?.trim() || undefined,
-        salary_min_usd: form.salary_min_usd,
-        salary_max_usd: form.salary_max_usd,
-        device_provided: form.device_provided,
-        bootcamp_required: form.bootcamp_required,
-        players_required: form.players_required,
-        preferred_maps_required: selectedMaps.length ? selectedMaps : undefined,
-        required_tournaments: selectedTournaments.length ? selectedTournaments : undefined,
-      });
-      setMyScouting(updated);
-      setShowForm(false);
-      Toast.show({ type: 'success', text1: 'Scouting updated!' });
-    } catch (err: any) {
-      Toast.show({ type: 'error', text1: err?.response?.data?.message ?? 'Failed to update' });
-    } finally {
-      setSaving(false);
-    }
-  };
 
   const handleCancelScouting = async () => {
     if (!myScouting) return;
@@ -706,7 +670,6 @@ export default function ScoutingScreen() {
       setCancelling(true);
       await cancelScouting(myScouting._id);
       setMyScouting(null);
-      setShowForm(false);
       Toast.show({ type: 'success', text1: 'Scouting cancelled' });
     } catch (err: any) {
       Toast.show({ type: 'error', text1: err?.response?.data?.message ?? 'Failed to cancel' });
@@ -756,7 +719,7 @@ export default function ScoutingScreen() {
               <Text style={styles.pageTitle}>My Scouting</Text>
               <Text style={styles.pageSubtitle}>Manage your active player search</Text>
             </View>
-            {myScouting && !showForm && (
+            {myScouting && (
               <View style={styles.activeDot}>
                 <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: GREEN }} />
                 <Text style={{ fontSize: 10, color: GREEN, fontWeight: '700' }}>ACTIVE</Text>
@@ -769,7 +732,7 @@ export default function ScoutingScreen() {
               <Ionicons name="search-outline" size={40} color={TEXT_MUTED} />
               <Text style={{ color: TEXT_MUTED, marginTop: 12 }}>Loading…</Text>
             </View>
-          ) : myScouting && !showForm ? (
+          ) : myScouting ? (
             // ── Active scouting card ────────────────────────────────────────────
             <View>
               <View style={orgS.activeCard}>
@@ -810,14 +773,10 @@ export default function ScoutingScreen() {
 
               {/* Actions */}
               <View style={orgS.actionsRow}>
-                <TouchableOpacity onPress={() => setShowForm(true)} style={orgS.editBtn} activeOpacity={0.8}>
-                  <Ionicons name="create-outline" size={16} color={TEXT_PRIMARY} />
-                  <Text style={orgS.editBtnText}>Edit</Text>
-                </TouchableOpacity>
                 <TouchableOpacity onPress={handleCancelScouting} disabled={cancelling}
-                  style={orgS.cancelBtn} activeOpacity={0.8}>
+                  style={[orgS.cancelBtn, { flex: 1 }]} activeOpacity={0.8}>
                   <Ionicons name="close-circle-outline" size={16} color={RED} />
-                  <Text style={orgS.cancelBtnText}>{cancelling ? 'Cancelling…' : 'Cancel scouting'}</Text>
+                  <Text style={orgS.cancelBtnText}>{cancelling ? 'Cancelling…' : 'Cancel & delete scouting'}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -935,32 +894,22 @@ export default function ScoutingScreen() {
 
               {/* Submit */}
               <View style={{ marginTop: 20 }}>
-                <Pressable onPress={myScouting ? handleUpdateScouting : handleCreateScouting} disabled={saving}>
+                <Pressable onPress={handleCreateScouting} disabled={saving}>
                   <LinearGradient
                     colors={saving ? ['#3A4A1A', '#2A3A12'] : ['#C8F135', '#96B827']}
                     start={{ x: 0, y: 0 }} end={{ x: 1, y: 0 }}
                     style={styles.submitBtn}
                   >
                     {saving ? (
-                      <Text style={[styles.submitLabel, { color: TEXT_MUTED }]}>
-                        {myScouting ? 'Updating…' : 'Creating…'}
-                      </Text>
+                      <Text style={[styles.submitLabel, { color: TEXT_MUTED }]}>Creating…</Text>
                     ) : (
                       <>
-                        <Ionicons name={myScouting ? 'save-outline' : 'rocket-outline'} size={18} color={BG} style={{ marginRight: 8 }} />
-                        <Text style={styles.submitLabel}>
-                          {myScouting ? 'Update scouting' : 'Launch scouting'}
-                        </Text>
+                        <Ionicons name="rocket-outline" size={18} color={BG} style={{ marginRight: 8 }} />
+                        <Text style={styles.submitLabel}>Launch scouting</Text>
                       </>
                     )}
                   </LinearGradient>
                 </Pressable>
-
-                {myScouting && showForm && (
-                  <TouchableOpacity onPress={() => setShowForm(false)} style={styles.cancelLink}>
-                    <Text style={styles.cancelLinkText}>Discard changes</Text>
-                  </TouchableOpacity>
-                )}
               </View>
 
               <View style={{ height: 40 }} />

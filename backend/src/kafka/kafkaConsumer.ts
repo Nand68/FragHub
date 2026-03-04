@@ -28,29 +28,37 @@ export const startConsumer = async () => {
             if (scouting.scouting_status !== ScoutingStatus.ACTIVE) return;
 
             if (!matchesFilters(profile, scouting)) return;
-            
-            const updatedScouting = await Scouting.findOneAndUpdate(
-                {
-                    _id: scouting._id,
-                    selected_count: { $lt: scouting.players_required },
-                },
-                { $inc: { selected_count: 1 } },
-                { new: true }
-            );
 
-            if (!updatedScouting) {
-                
-                console.log(`Scouting ${scouting._id} full. Player ${profile._id} rejected.`);
+            if (scouting.selected_count >= scouting.players_required) {
+                console.log(`Scouting ${scouting._id} full. Player ${profile._id} application skipped.`);
                 return;
             }
-           
-            const application = await Application.create({
+
+            // If player has a previous REJECTED application, remove it first (unique index)
+            // WITHDRAWN records are already deleted by the controller before sending to Kafka
+            await Application.deleteOne({
                 scoutingId: scouting._id,
                 playerId: profile._id,
-                organizationId: scouting.organizationId,
-                status: ApplicationStatus.PENDING,
+                status: ApplicationStatus.REJECTED,
             });
-        
+
+            let application;
+            try {
+                application = await Application.create({
+                    scoutingId: scouting._id,
+                    playerId: profile._id,
+                    organizationId: scouting.organizationId,
+                    status: ApplicationStatus.PENDING,
+                });
+            } catch (err: any) {
+                if (err.code === 11000) {
+                    // Already has a PENDING/SELECTED application — silently skip
+                    console.log(`Player ${profile._id} already has an active application for scouting ${scouting._id}. Skipped.`);
+                    return;
+                }
+                throw err;
+            }
+
             await Notification.create({
                 userId: scouting.organizationId,
                 type: 'APPLICATION_RECEIVED',

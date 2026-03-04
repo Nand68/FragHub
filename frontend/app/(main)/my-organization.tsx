@@ -211,9 +211,10 @@ export default function MyOrganizationScreen() {
     };
 
     const onViewProfile = (teammate: Teammate) => {
+        const userId = String((teammate as any).userId?._id ?? (teammate as any).userId ?? teammate._id);
         router.push({
             pathname: '/player-profile' as any,
-            params: { profileId: teammate._id, playerName: teammate.name },
+            params: { profileId: userId, playerName: teammate.name },
         });
     };
 

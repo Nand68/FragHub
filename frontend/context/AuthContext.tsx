@@ -15,6 +15,8 @@ type User = {
   id: string;
   email: string;
   role: UserRole;
+  username: string;
+  avatarUrl: string;
 };
 
 type AuthState = {
@@ -25,12 +27,13 @@ type AuthState = {
 };
 
 type AuthContextValue = AuthState & {
-  signup: (payload: { email: string; password: string; role: UserRole }) => Promise<void>;
+  signup: (payload: { email: string; password: string; role: UserRole; username: string }) => Promise<void>;
   verifyOtp: (payload: { email: string; otp: string }) => Promise<void>;
   login: (payload: { email: string; password: string }) => Promise<void>;
   requestReset: (payload: { email: string }) => Promise<void>;
   resetPassword: (payload: { email: string; otp: string; newPassword: string }) => Promise<void>;
   logout: () => Promise<void>;
+  updateAvatar: (avatarUrl: string) => Promise<void>;
 };
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined);
@@ -127,6 +130,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     });
   };
 
+  const updateAvatar: AuthContextValue['updateAvatar'] = async (avatarUrl: string) => {
+    setState((prev) => {
+      if (!prev.user) return prev;
+      const updated = { ...prev.user, avatarUrl };
+      SecureStore.setItemAsync(USER_STORAGE_KEY, JSON.stringify(updated));
+      return { ...prev, user: updated };
+    });
+  };
+
   const value = useMemo<AuthContextValue>(
     () => ({
       ...state,
@@ -136,6 +148,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       requestReset,
       resetPassword,
       logout,
+      updateAvatar,
     }),
     [state]
   );
@@ -148,4 +161,3 @@ export const useAuth = () => {
   if (!ctx) throw new Error('useAuth must be used within AuthProvider');
   return ctx;
 };
-

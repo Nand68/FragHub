@@ -53,22 +53,7 @@ export const getMyActiveScouting = async (req: AuthRequest, res: Response, next:
   }
 };
 
-export const updateScouting = async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const organization = await Organization.findOne({ userId: req.user!.id });
-    if (!organization) return next(new AppError('Organization profile not found', 404));
 
-    const scouting = await Scouting.findOne({ _id: req.params.scoutingId, organizationId: organization._id });
-    if (!scouting) return next(new AppError('Scouting not found', 404));
-    if (scouting.scouting_status !== ScoutingStatus.ACTIVE) return next(new AppError('Cannot update inactive scouting', 400));
-
-    Object.assign(scouting, req.body);
-    await scouting.save();
-    res.status(200).json({ success: true, data: scouting });
-  } catch (error) {
-    next(error);
-  }
-};
 
 export const cancelScouting = async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

@@ -10,6 +10,8 @@ export interface IUser extends Document {
   email: string;
   password: string;
   role: UserRole;
+  username: string;
+  avatarUrl: string;
   isVerified: boolean;
   createdAt: Date;
   comparePassword(candidatePassword: string): Promise<boolean>;
@@ -20,6 +22,8 @@ const userSchema = new Schema<IUser>(
     email: { type: String, required: true, unique: true, lowercase: true, trim: true },
     password: { type: String, required: true, select: false },
     role: { type: String, enum: Object.values(UserRole), required: true },
+    username: { type: String, required: true, unique: true, trim: true, minlength: 3, maxlength: 30 },
+    avatarUrl: { type: String, default: '' },
     isVerified: { type: Boolean, default: false },
   },
   { timestamps: true }

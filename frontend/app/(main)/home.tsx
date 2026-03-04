@@ -8,6 +8,7 @@ import {
   Animated,
   Platform,
   TextInput as RNTextInput,
+  Image,
 } from 'react-native';
 import { Text } from 'react-native-paper';
 import { KeyboardAwareScrollView } from 'react-native-keyboard-aware-scroll-view';
@@ -22,6 +23,8 @@ import {
   createOrganization,
   updateOrganization,
 } from '../../services/organization.service';
+import * as ImagePicker from 'expo-image-picker';
+import { uploadAvatar } from '../../services/user.service';
 
 // ── Design tokens ──────────────────────────────────────────────────────────────
 const ACCENT = '#C8F135';
@@ -259,6 +262,39 @@ export default function HomeScreen() {
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ organization_name: '', country: '', description: '' });
   const [focusedField, setFocusedField] = useState<string | null>(null);
+  const [avatarUploading, setAvatarUploading] = useState(false);
+
+  const { updateAvatar } = useAuth();
+
+  const handleChangeLogo = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== 'granted') {
+      Toast.show({ type: 'error', text1: 'Photo library permission required' });
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [1, 1],
+      quality: 0.85,
+    });
+    if (result.canceled || !result.assets[0]) return;
+    const asset = result.assets[0];
+    try {
+      setAvatarUploading(true);
+      const newUrl = await uploadAvatar(
+        asset.uri,
+        asset.fileName ?? 'logo.jpg',
+        asset.mimeType ?? 'image/jpeg'
+      );
+      await updateAvatar(newUrl);
+      Toast.show({ type: 'success', text1: 'Logo updated!' });
+    } catch (err: any) {
+      Toast.show({ type: 'error', text1: err?.message ?? 'Upload failed' });
+    } finally {
+      setAvatarUploading(false);
+    }
+  };
 
   const f = (name: string) => ({
     focused: focusedField === name,
@@ -401,7 +437,7 @@ export default function HomeScreen() {
             <Text style={styles.greetingLabel}>PLAYER DASHBOARD</Text>
             <Text style={styles.pageTitle}>Welcome back,{'\n'}
               <Text style={{ color: ACCENT }}>
-                {user?.email?.split('@')[0] ?? 'Player'}.
+                {user?.username?.split('@')[0] ?? 'Player'}
               </Text>
             </Text>
             <Text style={styles.pageSubtitle}>Signed in as {user?.email}</Text>
@@ -483,11 +519,20 @@ export default function HomeScreen() {
         <View style={styles.orgCard}>
           <LinearGradient colors={['#1C2C10', '#0F1A08']} style={styles.orgCardGradient}>
             <View style={styles.orgCardTop}>
-              <View style={styles.orgAvatarWrap}>
-                <Text style={styles.orgAvatarText}>
-                  {org!.organization_name.slice(0, 2).toUpperCase()}
-                </Text>
-              </View>
+              <TouchableOpacity onPress={handleChangeLogo} disabled={avatarUploading} activeOpacity={0.8}>
+                <View style={styles.orgAvatarWrap}>
+                  {user?.avatarUrl ? (
+                    <Image source={{ uri: user.avatarUrl }} style={styles.orgAvatarImg} />
+                  ) : (
+                    <Text style={styles.orgAvatarText}>
+                      {org!.organization_name.slice(0, 2).toUpperCase()}
+                    </Text>
+                  )}
+                  <View style={styles.orgAvatarCamBadge}>
+                    <Ionicons name="camera" size={12} color={BG} />
+                  </View>
+                </View>
+              </TouchableOpacity>
               <TouchableOpacity onPress={() => setEditing(true)} style={styles.editOrgBtn}>
                 <Ionicons name="create-outline" size={14} color={ACCENT} />
                 <Text style={styles.editOrgBtnText}>Edit</Text>
@@ -580,6 +625,8 @@ const styles = StyleSheet.create({
   orgCardName: { fontSize: 20, fontWeight: '800', color: TEXT_PRIMARY, letterSpacing: -0.4, marginBottom: 4 },
   orgCardMeta: { fontSize: 12, color: TEXT_MUTED, marginBottom: 6 },
   orgCardDesc: { fontSize: 13, color: TEXT_MUTED, lineHeight: 19, marginTop: 4 },
+  orgAvatarImg: { width: 48, height: 48, borderRadius: 14 },
+  orgAvatarCamBadge: { position: 'absolute', bottom: -4, right: -4, width: 22, height: 22, borderRadius: 11, backgroundColor: ACCENT, alignItems: 'center', justifyContent: 'center', borderWidth: 2, borderColor: '#1C2C10' },
 
   // Logout
   logoutBtn: {

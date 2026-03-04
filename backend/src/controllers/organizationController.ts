@@ -46,7 +46,7 @@ export const getRoster = async (req: AuthRequest, res: Response, next: NextFunct
     const organization = await Organization.findOne({ userId: req.user!.id });
     if (!organization) return next(new AppError('Organization not found', 404));
 
-    const players = await PlayerProfile.find({ currentOrganization: organization._id }).populate('userId', 'email');
+    const players = await PlayerProfile.find({ currentOrganization: organization._id }).populate('userId', '_id email username avatarUrl');
     res.status(200).json({ success: true, data: players });
   } catch (error) {
     next(error);

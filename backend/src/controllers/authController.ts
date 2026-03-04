@@ -2,20 +2,36 @@ import { Request, Response, NextFunction } from 'express';
 import User from '../models/User';
 import OTP from '../models/OTP';
 import RefreshToken from '../models/RefreshToken';
+import PlayerProfile from '../models/PlayerProfile';
+import Video from '../models/Video';
 import { AppError } from '../utils/AppError';
 import { generateOTP, getOTPExpiry } from '../utils/otpGenerator';
 import { sendOTPEmail } from '../utils/emailService';
 import { config } from '../config/env';
-import jwt, { Secret, SignOptions } from "jsonwebtoken";
+import jwt, { Secret, SignOptions } from 'jsonwebtoken';
+import { v2 as cloudinary } from 'cloudinary';
 
+// Helper: build default Dicebear avatar
+const dicebearUrl = (seed: string) =>
+  `https://api.dicebear.com/8.x/initials/svg?seed=${encodeURIComponent(seed)}&backgroundType=gradientLinear&fontSize=40`;
 
 export const signup = async (req: Request, res: Response, next: NextFunction) => {
   try {
-    const { email, password, role } = req.body;
-    const existingUser = await User.findOne({ email });
-    if (existingUser) return next(new AppError('Email already registered', 400));
+    const { email, password, role, username } = req.body;
 
-    await User.create({ email, password, role });
+    if (!username || username.trim().length < 3) {
+      return next(new AppError('Username must be at least 3 characters', 400));
+    }
+
+    const existingEmail = await User.findOne({ email });
+    if (existingEmail) return next(new AppError('Email already registered', 400));
+
+    const existingUsername = await User.findOne({ username: username.trim() });
+    if (existingUsername) return next(new AppError('Username already taken', 400));
+
+    const avatarUrl = dicebearUrl(username.trim());
+    await User.create({ email, password, role, username: username.trim(), avatarUrl });
+
     const otp = generateOTP();
     await OTP.create({ email, otp, type: 'signup', expiresAt: getOTPExpiry() });
     await sendOTPEmail(email, otp);
@@ -62,9 +78,24 @@ export const login = async (req: Request, res: Response, next: NextFunction) => 
       { expiresIn: config.jwtRefreshExpiry } as SignOptions
     );
 
-    await RefreshToken.create({ userId: user._id, token: refreshToken, expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000) });
+    await RefreshToken.create({
+      userId: user._id,
+      token: refreshToken,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    });
 
-    res.status(200).json({ success: true, accessToken, refreshToken, user: { id: user._id, email: user.email, role: user.role } });
+    res.status(200).json({
+      success: true,
+      accessToken,
+      refreshToken,
+      user: {
+        id: user._id,
+        email: user.email,
+        role: user.role,
+        username: user.username,
+        avatarUrl: user.avatarUrl,
+      },
+    });
   } catch (error) {
     next(error);
   }
@@ -109,7 +140,11 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
   try {
     const { refreshToken } = req.body;
     const decoded = jwt.verify(refreshToken, config.jwtRefreshSecret) as { id: string };
-    const tokenRecord = await RefreshToken.findOne({ userId: decoded.id, token: refreshToken, expiresAt: { $gt: new Date() } });
+    const tokenRecord = await RefreshToken.findOne({
+      userId: decoded.id,
+      token: refreshToken,
+      expiresAt: { $gt: new Date() },
+    });
     if (!tokenRecord) return next(new AppError('Invalid refresh token', 401));
 
     const user = await User.findById(decoded.id);
@@ -123,5 +158,87 @@ export const refreshToken = async (req: Request, res: Response, next: NextFuncti
     res.status(200).json({ success: true, accessToken });
   } catch (error) {
     next(new AppError('Invalid refresh token', 401));
+  }
+};
+
+// ── PATCH /auth/avatar ────────────────────────────────────────────────────────
+// Body: { avatarUrl: string }  (already-uploaded Cloudinary URL)
+export const updateAvatar = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).user?.id;
+    const { avatarUrl } = req.body;
+    if (!avatarUrl) return next(new AppError('avatarUrl is required', 400));
+
+    const user = await User.findByIdAndUpdate(userId, { avatarUrl }, { new: true });
+    if (!user) return next(new AppError('User not found', 404));
+
+    res.status(200).json({ success: true, avatarUrl: user.avatarUrl });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ── POST /auth/avatar/upload ──────────────────────────────────────────────────
+export const uploadAvatarImage = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const userId = (req as any).user?.id;
+    if (!(req as any).file) return next(new AppError('No image file provided', 400));
+
+    const result = await new Promise((resolve, reject) => {
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          resource_type: 'image',
+          folder: 'avatars',
+        },
+        (error, result) => {
+          if (error) reject(error);
+          else resolve(result);
+        }
+      );
+      uploadStream.end((req as any).file!.buffer);
+    });
+
+    const uploadResult = result as any;
+    const secureUrl = uploadResult.secure_url;
+
+    // Save URL to user
+    const user = await User.findByIdAndUpdate(userId, { avatarUrl: secureUrl }, { new: true });
+    if (!user) return next(new AppError('User not found', 404));
+
+    res.status(200).json({ success: true, avatarUrl: user.avatarUrl });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ── GET /auth/public-profile/:userId ──────────────────────────────────────────
+export const getPublicProfile = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userId } = req.params;
+
+    const user = await User.findById(userId).select('username avatarUrl role email');
+    if (!user) return next(new AppError('User not found', 404));
+
+    const playerProfile = await PlayerProfile.findOne({ userId }).lean().catch(() => null);
+
+    const videos = await Video.find({ userId })
+      .sort({ createdAt: -1 })
+      .select('videoUrl thumbnailUrl caption duration likes likedBy createdAt')
+      .lean();
+
+    res.status(200).json({
+      success: true,
+      user: {
+        id: user._id,
+        username: user.username,
+        avatarUrl: user.avatarUrl,
+        role: user.role,
+        email: user.email,
+      },
+      playerProfile: playerProfile ?? null,
+      videos,
+    });
+  } catch (error) {
+    next(error);
   }
 };

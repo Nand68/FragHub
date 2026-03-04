@@ -32,4 +32,6 @@ export const updateScoutingSchema = Joi.object({
   device_provided: Joi.boolean().optional(),
   bootcamp_required: Joi.boolean().optional(),
   players_required: Joi.number().min(1).optional(),
+  preferred_maps_required: Joi.array().items(Joi.string()).optional(),
+  required_tournaments: Joi.array().items(Joi.string()).optional(),
 });

@@ -16,6 +16,19 @@ export const applyToScouting = async (req: AuthRequest, res: Response, next: Nex
     if (!profile.profile_completed) return next(new AppError('Complete your profile first', 400));
     if (profile.currentOrganization) return next(new AppError('You are already part of an organization', 400));
 
+    const existingApp = await Application.findOne({ playerId: profile._id, scoutingId: req.params.scoutingId });
+    if (existingApp) {
+      // Block if already pending or selected
+      if (existingApp.status === ApplicationStatus.PENDING || existingApp.status === ApplicationStatus.SELECTED) {
+        return next(new AppError('You have already applied to this scouting', 400));
+      }
+      // For WITHDRAWN: delete old record so a fresh application can be created
+      if (existingApp.status === ApplicationStatus.WITHDRAWN) {
+        await existingApp.deleteOne();
+      }
+      // For REJECTED: fall through and allow a fresh application
+    }
+
     await producer.send({
       topic: 'scouting-applications',
       messages: [
@@ -82,7 +95,7 @@ export const getScoutingApplications = async (req: AuthRequest, res: Response, n
     if (!scouting) return next(new AppError('Scouting not found', 404));
 
     const applications = await Application.find({ scoutingId: req.params.scoutingId })
-      .populate({ path: 'playerId', populate: { path: 'userId', select: 'email' } })
+      .populate({ path: 'playerId', populate: { path: 'userId', select: '_id email username avatarUrl' } })
       .sort({ appliedAt: -1 });
 
     res.status(200).json({ success: true, data: applications });
@@ -128,6 +141,15 @@ export const selectPlayer = async (req: AuthRequest, res: Response, next: NextFu
     });
     emitToUser(String(profile.userId), 'notification:new', notification);
     emitToUser(String(profile.userId), 'roster:updated', { action: 'add', player: profile });
+
+    // Emit to org: update scouting card spots count in real-time
+    const org = await Organization.findById(scouting.organizationId);
+    if (org) {
+      emitToUser(String(org.userId), 'scouting:updated', {
+        selected_count: scouting.selected_count,
+        scouting_status: scouting.scouting_status,
+      });
+    }
 
     res.status(200).json({ success: true, message: 'Player selected successfully' });
   } catch (error) {

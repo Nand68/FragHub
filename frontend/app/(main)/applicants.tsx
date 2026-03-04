@@ -81,11 +81,12 @@ function ApplicantCard({
   busyId: string | null;
   onSelect: (id: string) => void;
   onReject: (id: string) => void;
-  onViewProfile: (profileId: string, name: string) => void;
+  onViewProfile: (app: Applicant) => void;
 }) {
   const p = app.playerId as unknown as {
-    name: string; game_id: string; kd_ratio: number;
+    _id: string; name: string; game_id: string; kd_ratio: number;
     average_damage: number; roles: string[]; age: number; device: string;
+    userId?: { _id: string; email: string; username: string; avatarUrl: string };
   };
 
   const isBusy = busyId === app._id;
@@ -96,7 +97,7 @@ function ApplicantCard({
 
   return (
     <TouchableOpacity
-      onPress={() => onViewProfile(String((app.playerId as any)?._id ?? app.playerId), p?.name ?? 'Player')}
+      onPress={() => onViewProfile(app)}
       activeOpacity={0.95}
       style={[cardS.wrapper, !isPending && { opacity: 0.75 }]}
     >
@@ -276,6 +277,8 @@ export default function ApplicantsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [busyId, setBusyId] = useState<string | null>(null);
   const [scoutingId, setScoutingId] = useState<string | null>(null);
+  const [selectedCount, setSelectedCount] = useState(0);
+  const [playersRequired, setPlayersRequired] = useState(0);
 
   const loadApplicants = useCallback(async (opts?: { silent?: boolean }) => {
     try {
@@ -283,6 +286,8 @@ export default function ApplicantsScreen() {
       const active = await getMyActiveScouting();
       if (!active) { setScoutingId(null); setApplicants([]); return; }
       setScoutingId(active._id);
+      setSelectedCount(active.selected_count ?? 0);
+      setPlayersRequired(active.players_required ?? 0);
       const data = await getScoutingApplicants(active._id);
       setApplicants(data);
     } catch (err: any) {
@@ -300,7 +305,7 @@ export default function ApplicantsScreen() {
     void loadApplicants({ silent: true });
   };
 
-  // Real-time: new applicant or withdrawn
+  // Real-time: new applicant, withdrawn, or scouting updated
   useEffect(() => {
     if (!socket) return;
     const onNew = (applicant: Applicant) => {
@@ -314,11 +319,16 @@ export default function ApplicantsScreen() {
         prev.map((a) => a._id === applicationId ? { ...a, status: 'WITHDRAWN' as const } : a)
       );
     };
+    const onScoutingUpdated = ({ selected_count }: { selected_count: number; scouting_status: string }) => {
+      setSelectedCount(selected_count);
+    };
     socket.on('applicant:new', onNew);
     socket.on('applicant:withdrawn', onWithdrawn);
+    socket.on('scouting:updated', onScoutingUpdated);
     return () => {
       socket.off('applicant:new', onNew);
       socket.off('applicant:withdrawn', onWithdrawn);
+      socket.off('scouting:updated', onScoutingUpdated);
     };
   }, [socket]);
 
@@ -348,8 +358,17 @@ export default function ApplicantsScreen() {
     }
   };
 
-  const onViewProfile = (profileId: string, name: string) => {
-    router.push({ pathname: '/player-profile' as any, params: { profileId, playerName: name } });
+  const onViewProfile = (app: Applicant) => {
+    const playerData = app.playerId as any;
+    // The backend populates userId with _id, email, username, avatarUrl
+    // We need the User _id for the public-profile endpoint
+    const userId = String(playerData?.userId?._id ?? playerData?.userId ?? '');
+    const name = playerData?.name ?? 'Player';
+    if (!userId) {
+      Toast.show({ type: 'error', text1: 'Cannot open profile', text2: 'User data not available' });
+      return;
+    }
+    router.push({ pathname: '/player-profile' as any, params: { profileId: userId, playerName: name } });
   };
 
   return (
@@ -371,9 +390,14 @@ export default function ApplicantsScreen() {
       >
         {/* Header */}
         <View style={styles.pageHeader}>
-          <View>
+          <View style={{ flex: 1 }}>
             <Text style={styles.pageTitle}>Applicants</Text>
             <Text style={styles.pageSubtitle}>Review and manage player applications</Text>
+            {!loading && scoutingId && playersRequired > 0 && (
+              <Text style={{ fontSize: 12, color: '#C8F135', fontWeight: '700', marginTop: 4 }}>
+                {selectedCount} / {playersRequired} spots filled
+              </Text>
+            )}
           </View>
           {!loading && scoutingId && applicants.length > 0 && (
             <View style={styles.countBadge}>
@@ -423,7 +447,7 @@ export default function ApplicantsScreen() {
                 busyId={busyId}
                 onSelect={onSelect}
                 onReject={onReject}
-                onViewProfile={onViewProfile}
+                onViewProfile={() => onViewProfile(app)}
               />
             ))}
           </>

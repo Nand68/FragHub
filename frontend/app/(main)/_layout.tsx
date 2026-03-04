@@ -42,6 +42,16 @@ export default function MainLayout() {
           ),
         }}
       />
+      {/* Clips tab — visible to everyone */}
+      <Tabs.Screen
+        name="videos"
+        options={{
+          title: 'Clips',
+          tabBarIcon: ({ color, size }) => (
+            <MaterialCommunityIcons name="video-outline" color={color} size={size} />
+          ),
+        }}
+      />
       <Tabs.Screen
         name="scouting"
         options={{
