@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useCallback } from 'react';
 import {
   View,
   StyleSheet,
@@ -8,6 +8,8 @@ import {
   Platform,
   ScrollView,
   Pressable,
+  type NativeSyntheticEvent,
+  type TextInputFocusEventData,
 } from 'react-native';
 import { Text, TextInput } from 'react-native-paper';
 import { useRouter } from 'expo-router';
@@ -39,6 +41,12 @@ export default function SignupScreen() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
 
   const buttonScale = useRef(new Animated.Value(1)).current;
+  const scrollRef = useRef<ScrollView>(null);
+
+  // Auto-scroll down when lower fields (password / confirm) are focused
+  const scrollToBottom = useCallback(() => {
+    setTimeout(() => scrollRef.current?.scrollToEnd({ animated: true }), 150);
+  }, []);
 
   const onPressIn = () => {
     Animated.spring(buttonScale, { toValue: 0.97, useNativeDriver: true, speed: 30 }).start();
@@ -88,16 +96,19 @@ export default function SignupScreen() {
   return (
     <KeyboardAvoidingView
       style={styles.root}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      keyboardVerticalOffset={Platform.OS === 'ios' ? 0 : 24}
     >
       {/* Background glow */}
       <View style={styles.glowTopRight} pointerEvents="none" />
       <View style={styles.glowBottomLeft} pointerEvents="none" />
 
       <ScrollView
+        ref={scrollRef}
         contentContainerStyle={styles.scroll}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
+        keyboardDismissMode="interactive"
       >
         {/* Logo mark */}
         <View style={styles.logoArea}>
@@ -175,7 +186,7 @@ export default function SignupScreen() {
             secureTextEntry={!showPassword}
             icon="lock-closed-outline"
             focused={focusedField === 'password'}
-            onFocus={() => setFocusedField('password')}
+            onFocus={() => { setFocusedField('password'); scrollToBottom(); }}
             onBlur={() => setFocusedField(null)}
             rightIcon={showPassword ? 'eye-off-outline' : 'eye-outline'}
             onRightIconPress={() => setShowPassword((v) => !v)}
@@ -187,7 +198,7 @@ export default function SignupScreen() {
             secureTextEntry={!showConfirm}
             icon="shield-checkmark-outline"
             focused={focusedField === 'confirm'}
-            onFocus={() => setFocusedField('confirm')}
+            onFocus={() => { setFocusedField('confirm'); scrollToBottom(); }}
             onBlur={() => setFocusedField(null)}
             rightIcon={showConfirm ? 'eye-off-outline' : 'eye-outline'}
             onRightIconPress={() => setShowConfirm((v) => !v)}
@@ -268,52 +279,65 @@ function InputField({
   onRightIconPress,
 }: InputFieldProps) {
   return (
-    <View style={[iStyles.wrapper, focused && iStyles.wrapperFocused]}>
-      <Ionicons
-        name={icon as any}
-        size={16}
-        color={focused ? ACCENT : TEXT_MUTED}
-        style={iStyles.leftIcon}
-      />
-      <TextInput
-        label={label}
-        value={value}
-        onChangeText={onChangeText}
-        secureTextEntry={secureTextEntry}
-        keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize}
-        onFocus={onFocus}
-        cursorColor={ACCENT}
-        selectionColor="rgba(200, 241, 53, 0.4)"
-        onBlur={onBlur}
-        style={iStyles.input}
-        theme={{
-          colors: {
-            primary: ACCENT,
-            onSurfaceVariant: TEXT_MUTED,
-            onSurface: TEXT_PRIMARY,
-            surface: 'transparent',
-            background: 'transparent',
-          },
-          fonts: {
-            bodyLarge: { fontFamily: 'System', fontSize: 15 },
-          },
-        }}
-        underlineColor="transparent"
-        activeUnderlineColor="transparent"
-        textColor={TEXT_PRIMARY}
-        placeholderTextColor={TEXT_MUTED}
-      />
-      {rightIcon && (
-        <TouchableOpacity onPress={onRightIconPress} style={iStyles.rightIcon}>
-          <Ionicons name={rightIcon as any} size={18} color={TEXT_MUTED} />
-        </TouchableOpacity>
-      )}
+    <View style={iStyles.fieldGroup}>
+      <Text style={iStyles.fieldLabel}>{label}</Text>
+      <View style={[iStyles.wrapper, focused && iStyles.wrapperFocused]}>
+        <Ionicons
+          name={icon as any}
+          size={16}
+          color={focused ? ACCENT : TEXT_MUTED}
+          style={iStyles.leftIcon}
+        />
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          secureTextEntry={secureTextEntry}
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          onFocus={onFocus}
+          cursorColor={ACCENT}
+          selectionColor="rgba(200, 241, 53, 0.4)"
+          onBlur={onBlur}
+          style={iStyles.input}
+          placeholder={label}
+          theme={{
+            dark: true,
+            colors: {
+              primary: ACCENT,
+              onSurfaceVariant: TEXT_MUTED,
+              onSurface: TEXT_PRIMARY,
+              surface: 'transparent',
+              background: 'transparent',
+            },
+          }}
+          underlineColor="transparent"
+          activeUnderlineColor="transparent"
+          textColor={TEXT_PRIMARY}
+          placeholderTextColor={TEXT_MUTED}
+        />
+        {rightIcon && (
+          <TouchableOpacity onPress={onRightIconPress} style={iStyles.rightIcon}>
+            <Ionicons name={rightIcon as any} size={18} color={TEXT_MUTED} />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
 
 const iStyles = StyleSheet.create({
+  fieldGroup: {
+    marginBottom: 14,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: TEXT_MUTED,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+    marginLeft: 2,
+  },
   wrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -321,7 +345,6 @@ const iStyles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1.5,
     borderColor: BORDER,
-    marginBottom: 12,
     paddingLeft: 14,
     overflow: 'hidden',
   },

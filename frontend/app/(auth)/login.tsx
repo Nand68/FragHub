@@ -234,52 +234,65 @@ function InputField({
   onRightIconPress,
 }: InputFieldProps) {
   return (
-    <View style={[iStyles.wrapper, focused && iStyles.wrapperFocused]}>
-      <Ionicons
-        name={icon as any}
-        size={16}
-        color={focused ? ACCENT : TEXT_MUTED}
-        style={iStyles.leftIcon}
-      />
-      <TextInput
-        label={label}
-        value={value}
-        onChangeText={onChangeText}
-        secureTextEntry={secureTextEntry}
-        keyboardType={keyboardType}
-        autoCapitalize={autoCapitalize}
-        onFocus={onFocus}
-        cursorColor={ACCENT}          
-        selectionColor="rgba(200, 241, 53, 0.4)"
-        onBlur={onBlur}
-        style={iStyles.input}
-        theme={{
-          dark: true,
-          colors: {
-            primary: ACCENT,
-            onSurfaceVariant: TEXT_MUTED,
-            onSurface: TEXT_PRIMARY,
-            surface: SURFACE,
-            background: SURFACE,
-            surfaceVariant: SURFACE,
-            outline: 'transparent',
-          },
-        }}
-        underlineColor="transparent"
-        activeUnderlineColor="transparent"
-        textColor={TEXT_PRIMARY}
-        placeholderTextColor={TEXT_MUTED}
-      />
-      {rightIcon && (
-        <TouchableOpacity onPress={onRightIconPress} style={iStyles.rightIcon}>
-          <Ionicons name={rightIcon as any} size={18} color={TEXT_MUTED} />
-        </TouchableOpacity>
-      )}
+    <View style={iStyles.fieldGroup}>
+      <Text style={iStyles.fieldLabel}>{label}</Text>
+      <View style={[iStyles.wrapper, focused && iStyles.wrapperFocused]}>
+        <Ionicons
+          name={icon as any}
+          size={16}
+          color={focused ? ACCENT : TEXT_MUTED}
+          style={iStyles.leftIcon}
+        />
+        <TextInput
+          value={value}
+          onChangeText={onChangeText}
+          secureTextEntry={secureTextEntry}
+          keyboardType={keyboardType}
+          autoCapitalize={autoCapitalize}
+          onFocus={onFocus}
+          cursorColor={ACCENT}
+          selectionColor="rgba(200, 241, 53, 0.4)"
+          onBlur={onBlur}
+          style={iStyles.input}
+          placeholder={label}
+          theme={{
+            dark: true,
+            colors: {
+              primary: ACCENT,
+              onSurfaceVariant: TEXT_MUTED,
+              onSurface: TEXT_PRIMARY,
+              surface: 'transparent',
+              background: 'transparent',
+            },
+          }}
+          underlineColor="transparent"
+          activeUnderlineColor="transparent"
+          textColor={TEXT_PRIMARY}
+          placeholderTextColor={TEXT_MUTED}
+        />
+        {rightIcon && (
+          <TouchableOpacity onPress={onRightIconPress} style={iStyles.rightIcon}>
+            <Ionicons name={rightIcon as any} size={18} color={TEXT_MUTED} />
+          </TouchableOpacity>
+        )}
+      </View>
     </View>
   );
 }
 
 const iStyles = StyleSheet.create({
+  fieldGroup: {
+    marginBottom: 14,
+  },
+  fieldLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: TEXT_MUTED,
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+    marginBottom: 6,
+    marginLeft: 2,
+  },
   wrapper: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -287,7 +300,6 @@ const iStyles = StyleSheet.create({
     borderRadius: 14,
     borderWidth: 1.5,
     borderColor: BORDER,
-    marginBottom: 12,
     paddingLeft: 14,
     overflow: 'hidden',
   },
